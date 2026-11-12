@@ -5,3 +5,5 @@ Staff copy of the wine tower map: where every wine sits, how many are on hand, a
 - `index.html` is the app.
 - `wines.js` holds the slot map.
 - `counts.js` is rewritten by the weekly Bevager pull.
+
+Staff address: https://tocamaderawine.github.io
