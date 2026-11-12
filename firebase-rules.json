@@ -1,0 +1,31 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "owner": {
+      ".read": true,
+      ".write": "auth != null && !data.exists()",
+      ".validate": "newData.val() === auth.uid"
+    },
+    "editors": {
+      ".read": "auth != null && root.child('owner').val() === auth.uid",
+      ".write": "auth != null && root.child('owner').val() === auth.uid",
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid"
+      }
+    },
+    "requests": {
+      ".read": "auth != null && root.child('owner').val() === auth.uid",
+      ".write": "auth != null && root.child('owner').val() === auth.uid",
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['email', 't']) && newData.child('email').isString() && newData.child('email').val().length <= 100 && newData.child('t').isNumber()"
+      }
+    },
+    "tower": {
+      ".read": true,
+      ".write": "auth != null && (root.child('owner').val() === auth.uid || root.child('editors').child(auth.uid).exists())"
+    }
+  }
+}

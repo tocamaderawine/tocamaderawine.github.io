@@ -40,6 +40,13 @@ body{padding:14px 16px 40px;max-width:760px;margin:0 auto}
 h1{font-family:var(--display);font-weight:700;font-size:26px;letter-spacing:.02em;margin:0;text-transform:uppercase}
 header{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
 #sync{font-size:13px;color:var(--muted)}
+.hdr-r{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+#acct{min-height:34px;padding:5px 10px;font-size:14px}
+#acctp{background:var(--panel);border:1px solid var(--brass);border-radius:10px;padding:12px;margin-top:10px}
+#acctp label{display:block;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:8px 0 4px}
+#acctp input{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:16px}
+.erow{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
+.erow span{flex:1;min-width:0;overflow-wrap:anywhere}
 button,input{font:inherit;color:inherit}
 button{cursor:pointer}
 button:focus-visible,input:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
@@ -112,8 +119,9 @@ h2{font-family:var(--display);font-size:20px;text-transform:uppercase;letter-spa
 <body>
 <header>
   <h1>Wine Tower</h1>
-  <div id="sync">Loading…</div>
+  <div class="hdr-r"><span id="sync">Loading…</span><button id="acct" class="btn" hidden>Sign in to edit</button></div>
 </header>
+<div id="acctp" hidden></div>
 
 <div class="summary" id="summary"></div>
 <div id="src" class="note" style="margin:-4px 0 10px"></div>
@@ -150,6 +158,7 @@ h2{font-family:var(--display);font-size:20px;text-transform:uppercase;letter-spa
 
 <script src="wines.js"></script>
 <script src="counts.js"></script>
+<script src="config.js"></script>
 <script>
 "use strict";
 /* ---------- rack map from the printed slot sheet (9/16), bottom row first ---------- */
@@ -258,11 +267,11 @@ function reindex(){ WIDX={}; HAY={};
 function sibs(id){ const w=slot(id).w; return (w&&WIDX[w])||[id]; }
 function prune(){ const ids=new Set(slotList().map(s=>s.id)); for(const k of Object.keys(S.slots)) if(!ids.has(k)) delete S.slots[k]; }
 function status(id){ const s=slot(id); if(!s.n) return "empty"; if(s.c==null) return "unk"; if(s.c<=0) return "out"; const need=sibs(id).reduce((a,k)=>a+slot(k).p,0); if(s.c<need) return "low"; return "ok"; }
-function applySync(y){
+function applySync(y,countsOnly){
   if(!y||!y.items||!(y.t>(S.syncT||0))) return false;
   for(const id in y.items){ const s=S.slots[id], it=y.items[id]; if(!s||!it) continue;
-    if(it.n!=null) s.n=it.n; if("c" in it) s.c=(it.c==null?null:it.c);
-    if("p" in it) s.p=it.p;
+    if(it.n!=null&&!countsOnly) s.n=it.n; if("c" in it) s.c=(it.c==null?null:it.c);
+    if("p" in it&&!countsOnly) s.p=it.p;
     if("w" in it){ if(it.w) s.w=it.w; else delete s.w; } if("vt" in it){ if(it.vt) s.vt=it.vt; else delete s.vt; } }
   if(y.clearLogBefore) S.log=S.log.filter(e=>e.t>=y.clearLogBefore);
   S.syncT=y.t; S.sync={src:y.src||"",audit:y.audit||"",t:y.t};
@@ -279,7 +288,7 @@ function setSync(t){ syncEl.textContent=t; }
 function clone(o){ return JSON.parse(JSON.stringify(o)); }
 function loadLocal(){ try{ const t=localStorage.getItem(LS); if(t){ const o=JSON.parse(t); if(o&&o.slots&&o.sections){ S=o; prune(); } } }catch(e){} }
 function saveLocal(){ try{ localStorage.setItem(LS,JSON.stringify(S)); }catch(e){} }
-function touch(){ if(readOnly) return; S.rev=Date.now(); saveLocal(); dirty=true; clearTimeout(saveTimer); saveTimer=setTimeout(push,900); if(!db) setSync("Saved on this device"); else setSync("Saving…"); }
+function touch(ids){ if(readOnly) return; if(LIVE){ S.rev=Date.now(); fbMark(ids||null); return; } S.rev=Date.now(); saveLocal(); dirty=true; clearTimeout(saveTimer); saveTimer=setTimeout(push,900); if(!db) setSync("Saved on this device"); else setSync("Saving…"); }
 function goReadOnly(){ // this person can look and search but not change the shared counts
   readOnly=true; dirty=false; clearTimeout(saveTimer); setSync("View only");
   if(lastRemote){ S=clone(lastRemote); prune(); } if(lastSync) applySync(lastSync); renderAll();
@@ -299,7 +308,7 @@ function staffCopy(label){ // no shared store here: show the baked-in audit snap
   S=defaultState(); if(window.SEED) applySync(window.SEED); if(window.COUNTS) applySync(window.COUNTS); readOnly=true; document.body.classList.add("solo"); renderAll(); setSync(label);
 }
 async function initStore(){
-  if(STANDALONE){ staffCopy("Staff copy"); if(location.protocol==="https:"&&"serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{}); return; }
+  if(STANDALONE){ if(LIVE) fbInit(); else staffCopy("Staff copy"); if(location.protocol==="https:"&&"serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{}); return; }
   loadLocal(); if(window.SEED&&applySync(window.SEED)) saveLocal(); renderAll();
   setSync("Saved on this device");
   let ns=null;
@@ -320,14 +329,182 @@ async function initStore(){
   }catch(e){ setSync("Saved on this device"); }
 }
 
+/* ---------- live mode: one shared database behind the staff site, so edits show on every phone ---------- */
+const FBC=window.FB||{}, LIVE=STANDALONE&&!!(FBC.db&&FBC.apiKey);
+const fb={user:null,token:"",exp:0,role:"viewer",owner:null,state:{v:null},logs:{v:null},pend:{},got:false,dirty:new Map(),seq:0,full:false,logQ:[],timer:null,busy:false,fails:0,online:false,admin:{req:{},ed:{}},poll:null};
+function fbCan(){ return fb.role==="owner"||fb.role==="editor"; }
+function fbUrl(path,auth,q){ return FBC.db.replace(/\/+$/,"")+"/"+path+".json"+(auth||q?"?"+[q,auth?"auth="+encodeURIComponent(auth):""].filter(Boolean).join("&"):""); }
+async function fbReq(method,path,body,auth){
+  const tok=auth?await fbToken():""; if(auth&&!tok) throw {status:401};
+  const r=await fetch(fbUrl(path,tok),{method,headers:body===undefined?{}:{"Content-Type":"application/json"},body:body===undefined?undefined:JSON.stringify(body)});
+  if(!r.ok) throw {status:r.status}; return r.json();
+}
+function fbSave(){ try{ if(fb.user) localStorage.setItem(LS+"-fb",JSON.stringify({rt:fb.user.rt,uid:fb.user.uid,email:fb.user.email})); else localStorage.removeItem(LS+"-fb"); }catch(e){} }
+async function fbToken(){
+  if(!fb.user) return "";
+  if(fb.token&&Date.now()<fb.exp-60000) return fb.token;
+  try{
+    const r=await fetch("https://securetoken.googleapis.com/v1/token?key="+encodeURIComponent(FBC.apiKey),{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:"grant_type=refresh_token&refresh_token="+encodeURIComponent(fb.user.rt)});
+    if(!r.ok){ if(r.status===400||r.status===401||r.status===403) fbSignOut(); return ""; }
+    const j=await r.json(); fb.token=j.id_token; fb.exp=Date.now()+(+j.expires_in||3600)*1000; if(j.refresh_token){ fb.user.rt=j.refresh_token; fbSave(); }
+    return fb.token;
+  }catch(e){ return ""; }
+}
+const AUTH_ERR={INVALID_LOGIN_CREDENTIALS:"That email and password don't match.",EMAIL_NOT_FOUND:"That email and password don't match.",INVALID_PASSWORD:"That email and password don't match.",INVALID_EMAIL:"That doesn't look like an email address.",USER_DISABLED:"This login has been switched off.",TOO_MANY_ATTEMPTS_TRY_LATER:"Too many tries. Wait a few minutes and try again."};
+async function fbSignIn(email,pw){
+  let r,j; try{ r=await fetch("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key="+encodeURIComponent(FBC.apiKey),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password:pw,returnSecureToken:true})}); j=await r.json(); }
+  catch(e){ throw new Error("Couldn't reach the sign-in service. Check your connection."); }
+  if(!r.ok){ const code=String(j&&j.error&&j.error.message||"").split(" ")[0]; throw new Error(AUTH_ERR[code]||"Sign-in failed. Try again."); }
+  fb.user={uid:j.localId,email:j.email||email,rt:j.refreshToken}; fb.token=j.idToken; fb.exp=Date.now()+(+j.expiresIn||3600)*1000; fbSave();
+  await fbRole();
+}
+function fbSignOut(){ fb.user=null; fb.token=""; fb.exp=0; fb.role="viewer"; fb.admin={req:{},ed:{}}; clearInterval(fb.poll); fb.poll=null; fbSave(); readOnly=true; fb.dirty.clear(); fb.full=false; fbAdopt(); fbStatus(); renderAcct(); }
+async function fbRole(){ // owner = the first login to open the app after setup; editors are approved by the owner
+  if(!fb.user) return;
+  const uid=fb.user.uid; let role="pending";
+  try{
+    let owner=await fbReq("GET","owner");
+    if(owner==null){ try{ await fbReq("PUT","owner",uid,true); owner=uid; }catch(e){ owner=await fbReq("GET","owner"); } }
+    fb.owner=owner;
+    if(owner===uid) role="owner";
+    else{ let ed=null; try{ ed=await fbReq("GET","editors/"+uid,undefined,true); }catch(e){}
+      if(ed) role="editor"; else{ try{ await fbReq("PUT","requests/"+uid,{email:String(fb.user.email).slice(0,100),t:Date.now()},true); }catch(e){} } }
+  }catch(e){ role=fb.role==="viewer"?"pending":fb.role; }
+  if(!fb.user||fb.user.uid!==uid) return;
+  fb.role=role; readOnly=!fbCan();
+  clearInterval(fb.poll); fb.poll=null;
+  if(role==="pending") fb.poll=setInterval(fbRole,30000);
+  if(role==="owner"){ fbAdmin(); fb.poll=setInterval(fbAdmin,30000); }
+  if(fb.got) fbAdopt(); fbStatus(); renderAcct();
+}
+async function fbAdmin(){ if(fb.role!=="owner") return; try{ const [rq,ed]=await Promise.all([fbReq("GET","requests",undefined,true),fbReq("GET","editors",undefined,true)]); fb.admin={req:rq||{},ed:ed||{}}; renderAcct(); }catch(e){} }
+async function fbApprove(uid){ const r=fb.admin.req[uid]; if(!r) return; try{ await fbReq("PUT","editors/"+uid,{email:r.email||"",t:Date.now()},true); await fbReq("DELETE","requests/"+uid,undefined,true); }catch(e){} fbAdmin(); }
+async function fbDecline(uid){ try{ await fbReq("DELETE","requests/"+uid,undefined,true); }catch(e){} fbAdmin(); }
+async function fbRemoveEditor(uid){ try{ await fbReq("DELETE","editors/"+uid,undefined,true); }catch(e){} fbAdmin(); }
+function fbSetPath(box,segs,val){
+  if(!segs.length){ box.v=val; return; }
+  if(box.v==null||typeof box.v!=="object") box.v={};
+  let o=box.v; for(let i=0;i<segs.length-1;i++){ if(o[segs[i]]==null||typeof o[segs[i]]!=="object") o[segs[i]]={}; o=o[segs[i]]; }
+  const k=segs[segs.length-1]; if(val===null||val===undefined){ if(Array.isArray(o)) o[k]=null; else delete o[k]; } else o[k]=val;
+}
+function fbDelta(box,msg,patch){
+  const base=String(msg.path||"/").split("/").filter(Boolean);
+  if(patch&&msg.data&&typeof msg.data==="object") for(const k in msg.data) fbSetPath(box,base.concat(k.split("/").filter(Boolean)),msg.data[k]);
+  else fbSetPath(box,base,msg.data);
+}
+function fbList(x){ return Array.isArray(x)?x.filter(v=>v!=null):(x&&typeof x==="object"?Object.values(x):[]); }
+function fbNormalize(r){
+  const s={v:1,rev:r.rev||0,sections:[],slots:{},log:[]}; if(r.syncT) s.syncT=r.syncT; if(r.sync) s.sync=r.sync;
+  for(const sec of fbList(r.sections)){ if(!sec||sec.id==null) continue; s.sections.push({id:String(sec.id),cols:fbList(sec.cols).map(String),rows:fbList(sec.rows).map(Number)}); }
+  if(!s.sections.length) s.sections=defaultState().sections;
+  const src=r.slots||{};
+  for(const sec of s.sections) for(const row of sec.rows) for(const c of sec.cols){ const id=row+c, d=src[id]||{}, o={n:d.n==null?"":String(d.n),c:d.c==null?null:+d.c,p:d.p==null?1:+d.p}; if(d.w) o.w=d.w; if(d.vt) o.vt=d.vt; s.slots[id]=o; }
+  return s;
+}
+function fbSlotOut(s){ if(!s) return null; const o={n:s.n||"",p:s.p==null?1:s.p}; if(s.c!=null) o.c=s.c; if(s.w) o.w=s.w; if(s.vt) o.vt=s.vt; return o; }
+function fbStateOut(){ const o={v:1,rev:S.rev||Date.now(),sections:S.sections,slots:{}}; for(const id in S.slots) o.slots[id]=fbSlotOut(S.slots[id]); if(S.syncT) o.syncT=S.syncT; if(S.sync) o.sync=S.sync; return o; }
+function fbLogBuild(){ const m=Object.assign({},fb.logs.v&&typeof fb.logs.v==="object"?fb.logs.v:{},fb.pend); S.log=Object.values(m).filter(e=>e&&e.t).sort((a,b)=>a.t-b.t); }
+function fbAdopt(){ // rebuild what's on screen from the shared copy, keeping any edit of ours that hasn't been sent yet
+  if(!fb.got) return;
+  const r=fb.state.v;
+  if(!r||!r.slots){
+    if(fbCan()&&!fb.full){ S=defaultState(); if(window.SEED) applySync(window.SEED); if(window.COUNTS) applySync(window.COUNTS); S.rev=Date.now(); fbLogBuild(); fbMark(null); }
+    else if(!fb.full){ S=defaultState(); if(window.SEED) applySync(window.SEED); if(window.COUNTS) applySync(window.COUNTS); fbLogBuild(); }
+    renderAll(); return;
+  }
+  if(fb.full){ fbLogBuild(); renderAll(); return; }
+  const n=fbNormalize(r);
+  for(const id of fb.dirty.keys()) if(S.slots[id]&&n.slots[id]) n.slots[id]=S.slots[id];
+  S=n; fbLogBuild();
+  if(window.COUNTS&&window.COUNTS.t>(S.syncT||0)&&applySync(window.COUNTS,true)&&fbCan()){ S.rev=Date.now(); fbMark(null); }
+  if(!S.slots[sel]) sel=slotList()[0].id;
+  renderAll(true);
+}
+function fbStatus(msg){
+  if(msg){ setSync(msg); return; }
+  const who=fb.role==="owner"||fb.role==="editor"?"Live. You can edit.":fb.role==="pending"?"Live. Waiting for approval to edit.":"Live";
+  setSync(fb.online?who:"Connecting…");
+}
+function fbMark(ids){ if(ids===null) fb.full=true; else if(ids) ids.forEach(id=>fb.dirty.set(id,++fb.seq)); clearTimeout(fb.timer); fb.timer=setTimeout(fbFlush,350); fbStatus("Saving…"); }
+async function fbFlush(){
+  if(fb.busy){ clearTimeout(fb.timer); fb.timer=setTimeout(fbFlush,400); return; }
+  if(!fbCan()||(!fb.full&&!fb.dirty.size&&!fb.logQ.length)) return;
+  fb.busy=true;
+  const full=fb.full, sent=new Map(fb.dirty), logs=fb.logQ.splice(0), body={};
+  if(full) body.state=fbStateOut(); else{ for(const id of sent.keys()) body["state/slots/"+id]=fbSlotOut(S.slots[id]); body["state/rev"]=S.rev||Date.now(); }
+  for(const [k,ev] of logs) body["log/"+k]=ev;
+  try{
+    await fbReq("PATCH","tower",body,true);
+    for(const [id,q] of sent) if(fb.dirty.get(id)===q) fb.dirty.delete(id);
+    if(full) fb.full=false;
+    fb.fails=0; fb.busy=false;
+    if(fb.full||fb.dirty.size||fb.logQ.length) fbMark(); else fbStatus("Saved. Live for everyone.");
+  }catch(e){
+    fb.busy=false; fb.logQ.unshift(...logs);
+    if(e&&(e.status===401||e.status===403)){ // not allowed: drop the edit and show the shared copy again
+      fb.dirty.clear(); fb.full=false; fb.logQ.length=0; fb.pend={}; await fbRole(); fbAdopt(); fbStatus("Not saved. This login can't edit."); return; }
+    fb.fails++; fbStatus("Not saved yet. Retrying…"); clearTimeout(fb.timer); fb.timer=setTimeout(fbFlush,Math.min(15000,1500*fb.fails));
+  }
+}
+function fbLog(id,d){ const ev={t:Date.now(),id,n:slot(id).n,d}, k=ev.t+"-"+Math.random().toString(36).slice(2,8); fb.pend[k]=ev; fb.logQ.push([k,ev]); fbLogBuild(); }
+function fbStream(path,q,box,onData){
+  let es; try{ es=new EventSource(fbUrl(path,"",q)); }catch(e){ return; }
+  const on=patch=>e=>{ let m; try{ m=JSON.parse(e.data); }catch(x){ return; } if(!m) return; fbDelta(box,m,patch); onData(); };
+  es.addEventListener("put",on(false)); es.addEventListener("patch",on(true));
+  es.onopen=()=>{ if(box===fb.state){ fb.online=true; if(!fb.timer&&!fb.busy) fbStatus(); } };
+  es.onerror=()=>{ if(box===fb.state){ fb.online=false; if(!fb.busy) fbStatus(); }
+    if(es.readyState===2&&box===fb.logs&&q) fbReq("GET",path).then(v=>{ box.v=v; onData(); }).catch(()=>{}); };
+}
+function fbInit(){
+  staffCopy("Connecting…"); document.body.classList.remove("solo"); document.body.classList.add("live");
+  fbStream("tower/state","",fb.state,()=>{ fb.got=true; fbAdopt(); });
+  fbStream("tower/log","orderBy=%22%24key%22&limitToLast=1500",fb.logs,()=>{ for(const k in fb.pend) if(fb.logs.v&&fb.logs.v[k]) delete fb.pend[k]; fbLogBuild(); if(fb.got) renderUsage(); });
+  try{ const s=JSON.parse(localStorage.getItem(LS+"-fb")||"null"); if(s&&s.rt&&s.uid){ fb.user=s; fb.role="pending"; fbRole(); } }catch(e){}
+  renderAcct();
+}
+let acctOpen=false, acctMsg="";
+function renderAcct(){
+  const btn=document.getElementById("acct"), box=document.getElementById("acctp"); if(!btn||!LIVE) return;
+  const waiting=Object.keys(fb.admin.req).length;
+  btn.hidden=false; btn.textContent=fb.user?(fb.role==="owner"?"Editors"+(waiting?" ("+waiting+")":""):"Account"):"Sign in to edit";
+  if(!acctOpen){ box.hidden=true; return; }
+  const act=document.activeElement&&document.activeElement.id; if(!fb.user&&(act==="au-email"||act==="au-pw")&&!box.hidden){ document.getElementById("au-msg").textContent=acctMsg; return; }
+  box.hidden=false;
+  if(!fb.user){
+    box.innerHTML=`<form id="authf"><p class="note" style="margin-top:0">Editors sign in here. Everyone else can use the tower without signing in.</p>
+      <label for="au-email">Email</label><input id="au-email" type="email" autocomplete="username" required>
+      <label for="au-pw">Password</label><input id="au-pw" type="password" autocomplete="current-password" required>
+      <div class="toolbar"><button class="btn" type="submit" id="au-go">Sign in</button><span class="note" id="au-msg" style="margin:0;color:var(--out)">${esc(acctMsg)}</span></div></form>`;
+    document.getElementById("authf").onsubmit=async e=>{ e.preventDefault(); const go=document.getElementById("au-go"); go.disabled=true; acctMsg=""; document.getElementById("au-msg").textContent="Signing in…";
+      try{ await fbSignIn(document.getElementById("au-email").value.trim(),document.getElementById("au-pw").value); acctMsg=""; if(fbCan()) acctOpen=false; document.activeElement&&document.activeElement.blur(); renderAcct(); }
+      catch(err){ acctMsg=err.message||"Sign-in failed."; const m=document.getElementById("au-msg"); if(m) m.textContent=acctMsg; const g=document.getElementById("au-go"); if(g) g.disabled=false; } };
+    return;
+  }
+  const roleText={owner:"You own this tower. You can edit, and you approve other editors.",editor:"You can edit counts, pars and slot names.",pending:"Your request to edit has been sent. The owner has to approve it on their phone.",viewer:""}[fb.role];
+  let h=`<p style="margin:0 0 4px"><b>${esc(fb.user.email)}</b></p><p class="note" style="margin-top:0">${roleText}</p>`;
+  if(fb.role==="owner"){
+    const rq=Object.entries(fb.admin.req), ed=Object.entries(fb.admin.ed);
+    h+=`<h2 style="margin-top:10px">Waiting for approval</h2>`+(rq.length?rq.map(([u,r])=>`<div class="erow"><span>${esc(r&&r.email||u)}</span><button class="btn" data-ok="${esc(u)}">Approve</button><button class="btn" data-no="${esc(u)}">Decline</button></div>`).join(""):`<p class="note">Nobody is waiting. A manager asks by signing in here with the login you made for them.</p>`);
+    h+=`<h2>Editors</h2>`+(ed.length?ed.map(([u,r])=>`<div class="erow"><span>${esc(r&&r.email||u)}</span><button class="btn" data-rm="${esc(u)}">Remove</button></div>`).join(""):`<p class="note">Only you so far.</p>`);
+  }
+  h+=`<div class="toolbar" style="margin-bottom:0"><button class="btn" id="au-out">Sign out</button><button class="btn" id="au-close">Close</button></div>`;
+  box.innerHTML=h;
+  document.getElementById("au-out").onclick=()=>{ acctOpen=false; fbSignOut(); };
+  document.getElementById("au-close").onclick=()=>{ acctOpen=false; renderAcct(); };
+  box.querySelectorAll("[data-ok]").forEach(b=>b.onclick=()=>fbApprove(b.dataset.ok));
+  box.querySelectorAll("[data-no]").forEach(b=>b.onclick=()=>fbDecline(b.dataset.no));
+  box.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>fbRemoveEditor(b.dataset.rm));
+}
+document.getElementById("acct").onclick=()=>{ acctOpen=!acctOpen; acctMsg=""; if(acctOpen&&fb.role==="owner") fbAdmin(); if(acctOpen&&fb.role==="pending") fbRole(); renderAcct(); };
+
 /* ---------- actions ---------- */
-function logEvent(id,d){ S.log.push({t:Date.now(),id,n:slot(id).n,d}); if(S.log.length>1500) S.log=S.log.slice(-1500); }
+function logEvent(id,d){ if(LIVE){ fbLog(id,d); return; } S.log.push({t:Date.now(),id,n:slot(id).n,d}); if(S.log.length>1500) S.log=S.log.slice(-1500); }
 function setAll(id,v){ sibs(id).forEach(k=>{ if(S.slots[k]) S.slots[k].c=v; }); }
-function pull(id){ const s=slot(id); if(s.c>0) logEvent(id,-1); setAll(id,(s.c==null||s.c<=0)?0:Math.max(0,Math.round((s.c-1)*100)/100)); touch(); renderAll(); }
-function add(id){ const s=slot(id); logEvent(id,1); setAll(id,(s.c==null?0:s.c)+1); touch(); renderAll(); }
-function setCount(id,v){ setAll(id,(v===""||isNaN(v))?null:Math.max(0,Math.round(+v*100)/100)); touch(); renderAll(); }
-function setPar(id,v){ const s=S.slots[id]; if(!s) return; s.p=Math.max(0,Math.round(+v||0)); touch(); renderAll(); }
-function setName(id,v){ const s=S.slots[id]; if(!s) return; s.n=v.trim(); delete s.w; delete s.vt; touch(); renderAll(true); }
+function pull(id){ const s=slot(id); if(s.c>0) logEvent(id,-1); setAll(id,(s.c==null||s.c<=0)?0:Math.max(0,Math.round((s.c-1)*100)/100)); touch(sibs(id)); renderAll(); }
+function add(id){ const s=slot(id); logEvent(id,1); setAll(id,(s.c==null?0:s.c)+1); touch(sibs(id)); renderAll(); }
+function setCount(id,v){ setAll(id,(v===""||isNaN(v))?null:Math.max(0,Math.round(+v*100)/100)); touch(sibs(id)); renderAll(); }
+function setPar(id,v){ const s=S.slots[id]; if(!s) return; s.p=Math.max(0,Math.round(+v||0)); touch([id]); renderAll(); }
+function setName(id,v){ const s=S.slots[id]; if(!s) return; s.n=v.trim(); delete s.w; delete s.vt; touch([id]); renderAll(true); }
 function addRow(secId){ const sec=S.sections.find(x=>x.id===secId); const r=Math.max(...sec.rows)+1; sec.rows.push(r); sec.cols.forEach(c=>{ S.slots[r+c]={n:"",c:null,p:1}; }); touch(); sel=r+sec.cols[0]; renderAll(); }
 
 /* ---------- 3D tower ---------- */
@@ -540,7 +717,7 @@ function renderDetail(keepFocus){
       <div class="ctl"><label for="dPar">Par</label><div class="step"><button id="pminus" aria-label="Lower par">−</button><input id="dPar" inputmode="numeric" value="${s.p}"><button id="pplus" aria-label="Raise par">+</button></div></div>
     </div>
     <p class="note" style="color:var(--text)">${esc(whereText(sel))}</p>
-    <p class="note">${readOnly?"View only. You can search and look, but counts can only be changed by an editor.":"− logs a bottle pulled and + logs a bottle added. Typing a number corrects the count without logging."}</p>`;
+    <p class="note">${readOnly?(LIVE?"View only. Editors sign in at the top of the page to change counts.":"View only. You can search and look, but counts can only be changed by an editor."):"− logs a bottle pulled and + logs a bottle added. Typing a number corrects the count without logging."}</p>`;
   if(readOnly) document.querySelectorAll("#detail .step button, #detail .step input").forEach(x=>{ x.disabled=true; });
   const $=id=>document.getElementById(id);
   $("minus").onclick=()=>pull(sel); $("plus").onclick=()=>add(sel);
