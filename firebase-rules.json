@@ -26,6 +26,22 @@
     "tower": {
       ".read": true,
       ".write": "auth != null && (root.child('owner').val() === auth.uid || root.child('editors').child(auth.uid).exists())"
+    },
+    "pulls": {
+      ".read": true,
+      ".indexOn": [
+        "t",
+        "order"
+      ],
+      "$id": {
+        "got": {
+          ".write": "data.parent().exists()",
+          ".validate": "newData.val() === now"
+        }
+      }
+    },
+    "toast": {
+      ".read": true
     }
   }
 }

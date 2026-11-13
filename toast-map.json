@@ -1,0 +1,8 @@
+{
+ "version": 1,
+ "note": "Toast menu item GUID -> tower slot(s). Built from the Toast wine menu. Bottles only.",
+ "deplete": true,
+ "bottleGroups": [],
+ "items": {},
+ "names": {}
+}

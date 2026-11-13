@@ -1,0 +1,19 @@
+# Cloudflare Worker that turns Toast order alerts into "wines to pull" on the Wine Tower site.
+name = "wine-tower-relay"
+main = "src/index.js"
+compatibility_date = "2025-06-01"
+workers_dev = true
+
+[vars]
+FIREBASE_DB = "https://toca-wine-tower-default-rtdb.firebaseio.com"
+MAP_URL = "https://tocamaderawine.github.io/toast-map.json"
+
+# Every day at 5:00 AM Arizona time: clear yesterday's pulls, refresh Toast table names and wine menu.
+[triggers]
+crons = ["0 12 * * *"]
+
+# Secrets, set in the Cloudflare dashboard (Settings > Variables and Secrets), never in this file:
+#   TOAST_WEBHOOK_SECRET  the secret key shown on the Toast webhook subscription
+#   FIREBASE_SECRET       Firebase database secret (or a service account JSON key)
+#   TOAST_CLIENT_ID       optional, Toast Standard API client ID (table names and wine menu)
+#   TOAST_CLIENT_SECRET   optional, Toast Standard API client secret

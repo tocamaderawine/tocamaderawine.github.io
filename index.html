@@ -31,6 +31,7 @@
   --low:#e8a93c;
   --out:#ff5a4f;
   --unk:#7c7072;
+  --pull:#4dd8ff;
   --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
   --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
 }
@@ -59,6 +60,20 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--brass);outline-
 #search{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
 #search::placeholder{color:var(--muted)}
 #results{margin-top:6px}
+#pulls{border:1px solid var(--pull);border-radius:10px;background:var(--panel);padding:10px 12px;margin:0 0 12px;box-shadow:0 0 0 1px rgba(77,216,255,.15),0 0 18px rgba(77,216,255,.12)}
+#pulls .ph{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+#pulls .ph b{font-family:var(--display);font-size:20px;text-transform:uppercase;letter-spacing:.04em;color:var(--pull)}
+#pulls .ph .n{font-family:var(--display);font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+#pulls .ph .snd{margin-left:auto;min-height:32px;padding:4px 10px;font-size:13px}
+.pr{display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.pr .pi{flex:1;min-width:0;background:none;border:0;padding:0;text-align:left;display:flex;flex-direction:column;gap:1px}
+.pr .pi b{font-size:16px;overflow-wrap:anywhere}
+.pr .pi small{color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+.pr .pi .pc{font-family:var(--display);font-weight:700;font-size:18px;color:var(--pull);letter-spacing:.02em}
+.pr .got{flex:none;min-height:46px;min-width:86px;border-radius:9px;border:0;background:var(--pull);color:#071216;font-family:var(--display);font-size:19px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.pr.done{opacity:.55}
+.pr.done .got{background:var(--panel-2);color:var(--text);border:1px solid var(--line);font-size:15px}
+@media (prefers-reduced-motion: no-preference){ #pulls.fresh{animation:pflash 1.2s ease-out 2} @keyframes pflash{0%{box-shadow:0 0 0 3px var(--pull),0 0 30px rgba(77,216,255,.6)}100%{box-shadow:0 0 0 1px rgba(77,216,255,.15),0 0 18px rgba(77,216,255,.12)}} }
 .res{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-top:6px}
 .res .dot{margin-top:6px}
 .res .rn{flex:1;min-width:0;display:flex;flex-direction:column}
@@ -125,6 +140,7 @@ h2{font-family:var(--display);font-size:20px;text-transform:uppercase;letter-spa
 
 <div class="summary" id="summary"></div>
 <div id="src" class="note" style="margin:-4px 0 10px"></div>
+<section id="pulls" hidden aria-live="polite" aria-label="Wines to pull"></section>
 <input id="search" type="search" placeholder="Find a wine or slot (e.g. Caymus, 127B)" autocomplete="off" aria-label="Find a wine or slot">
 <div id="results"></div>
 
@@ -455,9 +471,50 @@ function fbStream(path,q,box,onData){
   es.onerror=()=>{ if(box===fb.state){ fb.online=false; if(!fb.busy) fbStatus(); }
     if(es.readyState===2&&box===fb.logs&&q) fbReq("GET",path).then(v=>{ box.v=v; onData(); }).catch(()=>{}); };
 }
+/* ---------- bottles to pull, from Toast orders ---------- */
+const pulls={box:{v:null},opt:{},seen:null,sound:false,ctx:null};
+try{ pulls.sound=localStorage.getItem(LS+"-sound")==="1"; }catch(e){}
+function pullList(){ const out=[]; const v=pulls.box.v||{}; for(const id in v){ const p=v[id]; if(!p||typeof p!=="object"||p.void) continue; const o=Object.assign({id},p); if(id in pulls.opt) o.got=pulls.opt[id]; out.push(o); } return out; }
+function ago(t){ const m=Math.max(0,Math.round((Date.now()-t)/60000)); return m<1?"just now":m<60?m+" min ago":Math.floor(m/60)+" hr "+(m%60)+" min ago"; }
+function pullSlots(p){ return (Array.isArray(p.slots)?p.slots:Object.values(p.slots||{})).filter(x=>S.slots[x]); }
+function beep(){ try{ const c=pulls.ctx||(pulls.ctx=new (window.AudioContext||window.webkitAudioContext)()); const o=c.createOscillator(), g=c.createGain(); o.type="sine"; o.frequency.value=880; g.gain.setValueAtTime(.0001,c.currentTime); g.gain.exponentialRampToValueAtTime(.3,c.currentTime+.02); g.gain.exponentialRampToValueAtTime(.0001,c.currentTime+.45); o.connect(g); g.connect(c.destination); o.start(); o.stop(c.currentTime+.5); }catch(e){} }
+function renderPulls(){
+  const el=document.getElementById("pulls"), all=pullList();
+  const open=all.filter(p=>!p.got).sort((a,b)=>a.t-b.t), done=all.filter(p=>p.got&&Date.now()-p.got<10*60000).sort((a,b)=>b.got-a.got).slice(0,4);
+  PEND={}; for(const p of open) for(const k of pullSlots(p)) PEND[k]=(PEND[k]||0)+(p.qty||1);
+  const ids=new Set(open.map(p=>p.id));
+  if(pulls.seen){ let fresh=false; for(const id of ids) if(!pulls.seen.has(id)) fresh=true;
+    if(fresh){ el.classList.remove("fresh"); void el.offsetWidth; el.classList.add("fresh"); if(pulls.sound) beep(); } }
+  pulls.seen=ids;
+  document.title=(open.length?"("+open.length+") ":"")+"Toca Madera Wine Tower";
+  setPulse(open.length>0);
+  if(!open.length&&!done.length){ el.hidden=true; el.innerHTML=""; draw(); return; }
+  el.hidden=false;
+  const row=(p,isDone)=>{ const sl=pullSlots(p), d=S.slots[sl[0]]||{}, wine=d.n||p.name||"Wine", where=[p.table,p.check?"Check "+p.check:"",p.tab].filter(Boolean).join(" · ");
+    return `<div class="pr${isDone?" done":""}"><button class="pi" data-goto="${esc(sl[0]||"")}"><span><span class="pc">${esc(sl.join(" / ")||"?")}</span> <b>${esc(wine)}</b>${(p.qty||1)>1?` <b>×${p.qty}</b>`:""}</span>
+      <small>${esc(where)}${where?" · ":""}${isDone?"pulled "+ago(p.got):ago(p.t)}${p.status==="HOLD"?" · on hold":""}</small></button>
+      <button class="got" data-${isDone?"undo":"got"}="${esc(p.id)}">${isDone?"Undo":"Got it"}</button></div>`; };
+  el.innerHTML=`<div class="ph"><b>Wines to pull</b><span class="n">${open.length}</span><button class="btn snd" id="snd" aria-pressed="${pulls.sound}">Sound ${pulls.sound?"on":"off"}</button></div>`+open.map(p=>row(p,false)).join("")+done.map(p=>row(p,true)).join("");
+  draw();
+}
+async function markGot(id,on){
+  pulls.opt[id]=on?Date.now():null; renderPulls();
+  try{ const r=await fetch(fbUrl("pulls/"+id+"/got"),{method:on?"PUT":"DELETE",headers:{"Content-Type":"application/json"},body:on?JSON.stringify({".sv":"timestamp"}):undefined}); if(!r.ok) throw 0; }
+  catch(e){ delete pulls.opt[id]; renderPulls(); setSync("Couldn't save that. Check the connection and tap again."); return; }
+  setTimeout(()=>{ delete pulls.opt[id]; renderPulls(); },4000);
+}
+document.getElementById("pulls").addEventListener("click",e=>{
+  const g=e.target.closest("[data-got]"), u=e.target.closest("[data-undo]"), go=e.target.closest("[data-goto]"), sn=e.target.closest("#snd");
+  if(g){ markGot(g.dataset.got,true); return; }
+  if(u){ markGot(u.dataset.undo,false); return; }
+  if(sn){ pulls.sound=!pulls.sound; try{ localStorage.setItem(LS+"-sound",pulls.sound?"1":"0"); }catch(x){} if(pulls.sound) beep(); renderPulls(); return; }
+  if(go&&S.slots[go.dataset.goto]){ sel=go.dataset.goto; showView("tower"); renderAll(); focusSlot(sel,true); document.getElementById("stage").scrollIntoView({block:"nearest"}); }
+});
+setInterval(()=>{ if(!document.getElementById("pulls").hidden) renderPulls(); },30000);
 function fbInit(){
   staffCopy("Connecting…"); document.body.classList.remove("solo"); document.body.classList.add("live");
   fbStream("tower/state","",fb.state,()=>{ fb.got=true; fbAdopt(); });
+  fbStream("pulls","orderBy=%22t%22&limitToLast=200",pulls.box,()=>{ if(fb.got) renderPulls(); });
   fbStream("tower/log","orderBy=%22%24key%22&limitToLast=1500",fb.logs,()=>{ for(const k in fb.pend) if(fb.logs.v&&fb.logs.v[k]) delete fb.pend[k]; fbLogBuild(); if(fb.got) renderUsage(); });
   try{ const s=JSON.parse(localStorage.getItem(LS+"-fb")||"null"); if(s&&s.rt&&s.uid){ fb.user=s; fb.role="pending"; fbRole(); } }catch(e){}
   renderAcct();
@@ -563,12 +620,23 @@ function drawLabel(q,id,st){ // a readable tag: slot code, wine name, bottles on
   fitLines(s.n||"open",w-pad-5,h>=fs*3.15?2:1).forEach((l,i)=>cx.fillText(l,bb[0]+pad,bb[1]+fs*2.05+i*fs*1.04));
   cx.restore();
 }
-function outline(q,id,hit){ if(hit||id===sel){ path(q); cx.globalAlpha=1; cx.strokeStyle=id===sel?"#fff":"#c9a36a"; cx.lineWidth=id===sel?2.4:1.6; cx.stroke(); } cx.globalAlpha=1; }
+let PEND={}, pulse=0, pulseOn=false, GLOW=[];
+function pullGlow(q,id){
+  const n=PEND[id]; if(!n) return;
+  const a=reduce?1:.55+.45*Math.sin(pulse);
+  cx.save(); path(q); cx.globalAlpha=1; cx.strokeStyle="#4dd8ff"; cx.shadowColor="#4dd8ff"; cx.shadowBlur=14*a+4; cx.lineWidth=3+1.5*a; cx.stroke();
+  cx.globalAlpha=.16+.14*a; cx.fillStyle="#4dd8ff"; cx.fill(); cx.restore();
+  const bb=bbox(q), tx="PULL"+(n>1?" ×"+n:""); cx.save(); cx.font="700 12px "+FONT; const w=cx.measureText(tx).width+10, x=Math.max(2,Math.min(CW-w-2,(bb[0]+bb[2])/2-w/2)), y=Math.max(2,bb[1]-17);
+  cx.fillStyle="#4dd8ff"; cx.fillRect(x,y,w,16); cx.fillStyle="#071216"; cx.textAlign="left"; cx.textBaseline="middle"; cx.fillText(tx,x+5,y+8.5); cx.restore();
+}
+function pulseLoop(){ if(!pulseOn) return; pulse+=.09; draw(); requestAnimationFrame(pulseLoop); }
+function setPulse(on){ if(reduce){ pulseOn=false; return; } if(on&&!pulseOn){ pulseOn=true; requestAnimationFrame(pulseLoop); } else if(!on) pulseOn=false; }
+function outline(q,id,hit){ if(PEND[id]) GLOW.push([q,id]); if(hit||id===sel){ path(q); cx.globalAlpha=1; cx.strokeStyle=id===sel?"#fff":"#c9a36a"; cx.lineWidth=id===sel?2.4:1.6; cx.stroke(); } cx.globalAlpha=1; }
 function drawDoor(q,labelAt){
   path(q); cx.fillStyle="rgba(201,163,106,.06)"; cx.fill(); cx.strokeStyle="rgba(201,163,106,.85)"; cx.lineWidth=1.6; cx.stroke();
   if(labelAt){ cx.fillStyle="#c9a36a"; cx.textAlign="center"; cx.textBaseline="middle"; cx.font="700 15px "+FONT; cx.fillText("DOOR",labelAt[0],labelAt[1]-9); cx.font="600 13px "+FONT; cx.fillText("7 ft 5 in",labelAt[0],labelAt[1]+9); }
 }
-function draw(){ if(!CW) return; cx.clearRect(0,0,CW,CH); polys=[]; if(mode==="in") drawInside(); else drawOutside(); }
+function draw(){ if(!CW) return; cx.clearRect(0,0,CW,CH); polys=[]; GLOW=[]; if(mode==="in") drawInside(); else drawOutside(); for(const [q,id] of GLOW) pullGlow(q,id); }
 function drawOutside(){
   const H=towerH();
   const faces=[0,1,2,3].map(f=>({f,z:proj(faceXYZ(f,HW,H/2))[2]})).sort((a,b)=>b.z-a.z);
@@ -783,7 +851,7 @@ function renderResults(){
     +(ids.length>8?`<p class="note">${ids.length-8} more. Keep typing to narrow it down.</p>`:"");
 }
 document.getElementById("results").onclick=e=>{ const b=e.target.closest("[data-slot]"); if(!b||!S.slots[b.dataset.slot]) return; sel=b.dataset.slot; document.getElementById("search").blur(); showView("tower"); renderAll(); focusSlot(sel,true); document.getElementById("stage").scrollIntoView({block:"nearest"}); };
-function renderAll(keepFocus){ reindex(); relayout(); renderSummary(); renderResults(); renderFaces(); renderDetail(keepFocus); renderSheet(); renderRestock(); renderUsage(); draw(); }
+function renderAll(keepFocus){ reindex(); relayout(); if(LIVE&&pulls.box.v) renderPulls(); renderSummary(); renderResults(); renderFaces(); renderDetail(keepFocus); renderSheet(); renderRestock(); renderUsage(); draw(); }
 function showView(v){ document.querySelectorAll(".tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.v===v)); document.querySelectorAll(".view").forEach(s=>s.classList.toggle("on",s.id==="v-"+v)); if(v==="tower") resize(); }
 document.querySelector(".tabs").onclick=e=>{ const b=e.target.closest("button"); if(b) showView(b.dataset.v); };
 document.getElementById("search").addEventListener("input",e=>{ query=e.target.value.trim(); reindex(); const hits=slotList().filter(s=>matches(s.id)); if(hits.length){ sel=hits[0].id; renderAll(); if(document.getElementById("v-tower").classList.contains("on")) focusSlot(sel,hits.length<=3); } else renderAll(); });
