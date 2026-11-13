@@ -132,6 +132,7 @@ h2{font-family:var(--display);font-size:20px;text-transform:uppercase;letter-spa
 </style>
 </head>
 <body>
+<p id="moved" hidden style="background:var(--panel);border:1px solid var(--brass);border-radius:10px;padding:10px 12px;margin:0 0 12px;font-size:14px">This is your private Claude copy. Staff use <a href="https://tocamaderawine.github.io" style="color:var(--brass)">tocamaderawine.github.io</a>, and changes made here don't reach it.</p>
 <header>
   <h1>Wine Tower</h1>
   <div class="hdr-r"><span id="sync">Loading…</span><button id="acct" class="btn" hidden>Sign in to edit</button></div>
@@ -768,7 +769,7 @@ function renderSummary(){
     <div class="chip"><b>${n.low}</b><span><i class="dot d-low"></i>Below par</span></div>
     <div class="chip"><b>${n.ok}</b><span><i class="dot d-ok"></i>Stocked</span></div>
     <div class="chip"><b>${n.unk}</b><span><i class="dot d-unk"></i>Not counted</span></div>`;
-  document.getElementById("src").textContent=S.sync?("Counts from "+S.sync.src+" "+S.sync.audit+". Loaded "+new Date(S.sync.t).toLocaleString(undefined,{month:"numeric",day:"numeric",hour:"numeric",minute:"2-digit"})+"."):"";
+  document.getElementById("src").textContent=LIVE?("Counts update live as editors change them."+(S.sync&&S.sync.audit?" Last Bevager audit "+String(S.sync.audit).split(",")[0]+".":"")):(S.sync?("Counts from "+S.sync.src+" "+S.sync.audit+". Loaded "+new Date(S.sync.t).toLocaleString(undefined,{month:"numeric",day:"numeric",hour:"numeric",minute:"2-digit"})+"."):"");
 }
 function renderFaces(){ document.getElementById("faces").innerHTML=S.sections.map(s=>`<button data-f="${FACE_OF[s.id]??0}">${s.id}s</button>`).join("")+`<button data-f="3">Door</button>`; }
 document.getElementById("faces").onclick=e=>{ const b=e.target.closest("button"); if(b) turnTo(+b.dataset.f); };
@@ -854,8 +855,14 @@ document.getElementById("results").onclick=e=>{ const b=e.target.closest("[data-
 function renderAll(keepFocus){ reindex(); relayout(); if(LIVE&&pulls.box.v) renderPulls(); renderSummary(); renderResults(); renderFaces(); renderDetail(keepFocus); renderSheet(); renderRestock(); renderUsage(); draw(); }
 function showView(v){ document.querySelectorAll(".tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.v===v)); document.querySelectorAll(".view").forEach(s=>s.classList.toggle("on",s.id==="v-"+v)); if(v==="tower") resize(); }
 document.querySelector(".tabs").onclick=e=>{ const b=e.target.closest("button"); if(b) showView(b.dataset.v); };
-document.getElementById("search").addEventListener("input",e=>{ query=e.target.value.trim(); reindex(); const hits=slotList().filter(s=>matches(s.id)); if(hits.length){ sel=hits[0].id; renderAll(); if(document.getElementById("v-tower").classList.contains("on")) focusSlot(sel,hits.length<=3); } else renderAll(); });
+let searchT=null;
+document.getElementById("search").addEventListener("input",e=>{ clearTimeout(searchT); const v=e.target.value.trim(); searchT=setTimeout(()=>{
+  query=v; reindex(); const hits=slotList().filter(s=>matches(s.id));
+  const one=hits.length&&hits.every(h=>{ const a=slot(h.id), b=slot(hits[0].id); return (a.w||a.n)===(b.w||b.n); });
+  if(one){ sel=hits[0].id; renderAll(); if(document.getElementById("v-tower").classList.contains("on")) focusSlot(sel,true); } else renderAll();
+},140); });
 window.addEventListener("resize",resize);
+if(!STANDALONE) document.getElementById("moved").hidden=false;
 initStore(); resize(); setMode(mode);
 if(document.fonts&&document.fonts.ready) document.fonts.ready.then(draw);
 </script>
