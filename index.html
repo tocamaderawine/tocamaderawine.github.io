@@ -648,7 +648,7 @@ function drawDoor(q,labelAt){
 }
 function draw(){ if(!CW) return; cx.clearRect(0,0,CW,CH); polys=[]; GLOW=[]; if(mode==="in") drawInside(); else drawOutside(); for(const [q,id] of GLOW) pullGlow(q,id); }
 /* ---------- bottle look: each slot drawn as its own bottle (shape by style, glass by wine), region on the label ---------- */
-let BOTTLES=(()=>{ if(!window.WINEINFO) return false; try{ const v=localStorage.getItem(LS+"-look"); if(v) return v==="bottles"; }catch(e){} return window.LOOK!=="plain"; })();
+let BOTTLES=false;
 const ROWH=1.6; function rowScale(){ return BOTTLES?ROWH:1; } function doorU(){ return 19.75*rowScale(); } function eye0(){ return 15.5*rowScale(); }
 cam.eye=eye0();
 function setLook(b){ BOTTLES=b; try{ localStorage.setItem(LS+"-look",b?"bottles":"plain"); }catch(e){} const lb=document.getElementById("lookbtn"); if(lb) lb.textContent=b?"Plain look":"Bottle look"; cam.eye=eye0(); cam.pan=0; cam.zoom=1; cam.izoom=1; renderAll(true); }
@@ -854,12 +854,17 @@ function focusSlot(id,zoomIn){
   const z=zoomIn?Math.max(cam.zoom,2.4):cam.zoom, fit=(CH*.86)/H;
   go({yaw:near(FACE_YAW[f]-.18,cam.yaw),zoom:z,pan:(yc-H/2)*fit*z});
 }
-const pts=new Map(); let moved=0, pinch0=0, zoom0=1;
-cv.addEventListener("pointerdown",e=>{ cv.setPointerCapture(e.pointerId); pts.set(e.pointerId,[e.clientX,e.clientY]); moved=0; target=null;
+const pts=new Map(); let moved=0, pinch0=0, zoom0=1, gax=null, gx=0, gy=0, gyaw=0;
+function snapYaw(a){ return Math.round(a/(Math.PI/2))*(Math.PI/2); }
+cv.addEventListener("pointerdown",e=>{ cv.setPointerCapture(e.pointerId); pts.set(e.pointerId,[e.clientX,e.clientY]); moved=0; gax=null; gx=gy=0;
+  if(mode==="in"){ gyaw=target&&target.iyaw!=null?snapYaw(target.iyaw):snapYaw(cam.iyaw); target=null; if(Math.abs(gyaw-cam.iyaw)>.004) go({iyaw:gyaw}); } else target=null;
   if(pts.size===2){ const a=[...pts.values()]; pinch0=Math.hypot(a[0][0]-a[1][0],a[0][1]-a[1][1]); zoom0=mode==="in"?cam.izoom:cam.zoom; } });
 cv.addEventListener("pointermove",e=>{ const p=pts.get(e.pointerId); if(!p) return;
   const dx=e.clientX-p[0], dy=e.clientY-p[1]; pts.set(e.pointerId,[e.clientX,e.clientY]); moved+=Math.abs(dx)+Math.abs(dy);
-  if(pts.size===1){ if(mode==="in"){ const F=focal(); cam.iyaw-=dx/F; cam.eye+=dy/(F/HW); } else { cam.yaw+=dx*.011; cam.pan+=dy; } }
+  if(pts.size===1){ if(mode==="in"){ gx+=dx; gy+=dy;
+      if(!gax&&Math.max(Math.abs(gx),Math.abs(gy))>=10) gax=Math.abs(gy)>=Math.abs(gx)*.8?"v":"h";
+      if(gax==="v") cam.eye+=dy/(focal()/HW);
+      else if(gax==="h"&&Math.abs(gx)>=28){ gax="done"; go({iyaw:gyaw-Math.sign(gx)*Math.PI/2}); } } else { cam.yaw+=dx*.011; cam.pan+=dy; } }
   else if(pts.size===2&&pinch0){ const a=[...pts.values()], d=Math.hypot(a[0][0]-a[1][0],a[0][1]-a[1][1]), z=zoom0*d/pinch0; if(mode==="in") cam.izoom=z; else { cam.pan*=z/cam.zoom; cam.zoom=z; } }
   clampCam(); draw(); });
 function up(e){ const had=pts.has(e.pointerId); pts.delete(e.pointerId); if(pts.size<2) pinch0=0;
@@ -872,7 +877,7 @@ document.getElementById("zout").onclick=()=>zoomBy(1/1.4);
 document.getElementById("zfit").onclick=()=>{ if(mode==="in") go({izoom:1,eye:eye0()}); else go({zoom:1,pan:0}); };
 function setMode(m){ mode=m; try{ localStorage.setItem(LS+"-mode",m); }catch(e){} target=null;
   document.querySelectorAll("#modes button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.m===m));
-  document.getElementById("hint").textContent=m==="in"?"You are standing inside with the door behind you. Drag to look around and to move up or down. Columns read A, B, C left to right in here.":"You are looking through the glass, so columns run C, B, A left to right, the mirror of inside. Pinch to zoom in until the names show.";
+  document.getElementById("hint").textContent=m==="in"?"You are standing inside with the door behind you. Swipe up or down to move along the wall. Swipe sideways to turn to the next wall. Columns read A, B, C left to right in here.":"You are looking through the glass, so columns run C, B, A left to right, the mirror of inside. Pinch to zoom in until the names show.";
   draw(); }
 document.getElementById("modes").onclick=e=>{ const b=e.target.closest("button"); if(b) setMode(b.dataset.m); };
 function whereText(id){
@@ -986,7 +991,7 @@ document.getElementById("search").addEventListener("input",e=>{ clearTimeout(sea
 },140); });
 window.addEventListener("resize",resize);
 if(!STANDALONE) document.getElementById("moved").hidden=false;
-{ const lb=document.getElementById("lookbtn"); if(window.WINEINFO){ lb.hidden=false; lb.textContent=BOTTLES?"Plain look":"Bottle look"; lb.onclick=()=>setLook(!BOTTLES); } }
+
 initStore(); resize(); setMode(mode);
 if(document.fonts&&document.fonts.ready) document.fonts.ready.then(draw);
 </script>
