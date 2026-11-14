@@ -576,13 +576,13 @@ function addRow(secId){ const sec=S.sections.find(x=>x.id===secId); const r=Math
 
 /* ---------- 3D tower ---------- */
 const cv=document.getElementById("cv"), cx=cv.getContext("2d");
-const W=9, HW=W/2, TALL={106:2}, DOOR_U=19.75, EYE0=15.5;
+const W=9, HW=W/2, TALL={106:2};
 const IN_YAW=[Math.PI,-Math.PI/2,0,Math.PI/2];
 let mode="out";
 try{ if(localStorage.getItem(LS+"-mode")==="in") mode="in"; }catch(e){}
-let cam={yaw:-0.62,pitch:0.1,zoom:1,pan:0,iyaw:-Math.PI/2,eye:EYE0,izoom:1}, target=null, polys=[], CW=0,CH=0, LAY={};
+let cam={yaw:-0.62,pitch:0.1,zoom:1,pan:0,iyaw:-Math.PI/2,eye:15.5,izoom:1}, target=null, polys=[], CW=0,CH=0, LAY={};
 const reduce=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-function relayout(){ LAY={}; for(const sec of S.sections){ let y=0; const ys=[],hs=[]; for(const r of sec.rows){ const h=TALL[r]||1; ys.push(y); hs.push(h); y+=h; } LAY[sec.id]={y:ys,h:hs,H:y}; } }
+function relayout(){ LAY={}; for(const sec of S.sections){ let y=0; const ys=[],hs=[]; for(const r of sec.rows){ const h=(TALL[r]||1)*rowScale(); ys.push(y); hs.push(h); y+=h; } LAY[sec.id]={y:ys,h:hs,H:y}; } }
 function towerH(){ let m=35; for(const k in LAY) m=Math.max(m,LAY[k].H); return m; }
 function resize(){ const dpr=Math.min(window.devicePixelRatio||1,2.5); CW=cv.clientWidth; CH=Math.round(Math.max(380,Math.min(window.innerHeight*0.62,640))); cv.style.height=CH+"px"; cv.width=CW*dpr; cv.height=CH*dpr; cx.setTransform(dpr,0,0,dpr,0,0); draw(); }
 function faceXYZ(f,u,v){ // u runs left to right as seen from OUTSIDE
@@ -647,81 +647,113 @@ function drawDoor(q,labelAt){
   if(labelAt){ cx.fillStyle="#c9a36a"; cx.textAlign="center"; cx.textBaseline="middle"; cx.font="700 15px "+FONT; cx.fillText("DOOR",labelAt[0],labelAt[1]-9); cx.font="600 13px "+FONT; cx.fillText("7 ft 5 in",labelAt[0],labelAt[1]+9); }
 }
 function draw(){ if(!CW) return; cx.clearRect(0,0,CW,CH); polys=[]; GLOW=[]; if(mode==="in") drawInside(); else drawOutside(); for(const [q,id] of GLOW) pullGlow(q,id); }
-/* ---------- bottle look: each slot drawn as its bottle, labelled with its region ---------- */
+/* ---------- bottle look: each slot drawn as its own bottle (shape by style, glass by wine), region on the label ---------- */
 let BOTTLES=(()=>{ if(!window.WINEINFO) return false; try{ const v=localStorage.getItem(LS+"-look"); if(v) return v==="bottles"; }catch(e){} return window.LOOK!=="plain"; })();
-function setLook(b){ BOTTLES=b; try{ localStorage.setItem(LS+"-look",b?"bottles":"plain"); }catch(e){} const lb=document.getElementById("lookbtn"); if(lb){ lb.textContent=b?"Plain look":"Bottle look"; } renderAll(true); }
+const ROWH=1.6; function rowScale(){ return BOTTLES?ROWH:1; } function doorU(){ return 19.75*rowScale(); } function eye0(){ return 15.5*rowScale(); }
+cam.eye=eye0();
+function setLook(b){ BOTTLES=b; try{ localStorage.setItem(LS+"-look",b?"bottles":"plain"); }catch(e){} const lb=document.getElementById("lookbtn"); if(lb) lb.textContent=b?"Plain look":"Bottle look"; cam.eye=eye0(); cam.pan=0; cam.zoom=1; cam.izoom=1; renderAll(true); }
 const CCOL={"USA":"#e3b04b","France":"#7aa2f7","Italy":"#5cc48a","Spain":"#f2845c","Germany":"#b998f5","Portugal":"#d9a07a","Argentina":"#65cfe8","Chile":"#f19ad1","Australia":"#f1d36a","South Africa":"#5fd6c3","New Zealand":"#9ad86f","Mexico":"#e0607f","":"#9a8f8c"};
-const GLASS={red:["#1d2b20","#2c4030"],white:["#5f7a47","#86a36a"],spark:["#1f3324","#2f4a34"],rose:["#d79aa3","#ecc0c6"]};
 function info(id){ const w=window.WINEINFO&&window.WINEINFO[id], s=slot(id); if(!w||!s.n) return null; return nrm(w.n).replace(/[^a-z0-9]/g,"")===nrm(s.n).replace(/[^a-z0-9]/g,"")?w:null; }
-// half-height of the bottle (0..0.5 of the slot) along its length, base on the left, neck on the right
-function profile(shape,x){
-  const ease=t=>t<=0?0:t>=1?1:t*t*(3-2*t);
-  const P={bdx:{r:.40,b:.76,e:.82,n:.13},burg:{r:.41,b:.70,e:.85,n:.13},champ:{r:.43,b:.68,e:.84,n:.15},flute:{r:.33,b:.70,e:.88,n:.11},prov:{r:.39,b:.72,e:.83,n:.14}}[shape]||{r:.40,b:.76,e:.82,n:.13};
-  let r;
-  if(shape==="prov"){ r=x<P.b?P.r-.05*Math.sin(Math.PI*x/P.b):x<P.e?P.r+(P.n-P.r)*ease((x-P.b)/(P.e-P.b)):P.n; }
-  else if(shape==="bdx"){ const t=(x-P.b)/(P.e-P.b); r=x<P.b?P.r:x<P.e?P.n+(P.r-P.n)*Math.pow(1-t,.6)*(1-t*.15):P.n; }
-  else r=x<P.b?P.r:x<P.e?P.r+(P.n-P.r)*ease((x-P.b)/(P.e-P.b)):P.n;
-  if(x>.94) r+=.025; // lip
-  if(x<.035) r*=.9+2.8*x; // rounded base
-  return r;
-}
 function shortRegion(r){ return String(r||"").split(",")[0].replace(/^Saint-/,"St-").replace(/ Valley$/,"").replace(/^Côtes de /,"").replace(/ Grand Cru$/," GC").trim(); }
-function bmap(q){ // corners as seen on screen: top-left, top-right, bottom-right, bottom-left (neck always points right)
+function mixHex(a,b,t){ const p=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)); const x=p(a), y=p(b); return "#"+x.map((v,i)=>Math.round(v+(y[i]-v)*t).toString(16).padStart(2,"0")).join(""); }
+// Bottle styles, drawn to real proportions. len = length / diameter. Points along the bottle are 0 (base) to 1 (lip).
+const SHAPES={
+  bdx:  {len:4.0, r:x=>x<.60?.5:x<.68?.19+.31*Math.cos(Math.PI/2*Math.pow((x-.60)/.08,1.6)):.19-.02*(x-.68)/.32, lab:[.06,.56], cap:.80, foil:0},  // Bordeaux: straight sides, sharp high shoulder
+  burg: {len:3.7, r:x=>x<.46?.5:x<.76?.19+.31*(1+Math.cos(Math.PI*(x-.46)/.30))/2:.19, lab:[.05,.43], cap:.83, foil:0},                          // Burgundy: long sloping shoulder
+  champ:{len:3.5, r:x=>x<.45?.5:x<.74?.21+.29*(1+Math.cos(Math.PI*(x-.45)/.29))/2:.21, lab:[.06,.42], cap:.63, foil:1},                          // Champagne: heavy, sloped, long foil
+  flute:{len:5.0, r:x=>x<.44?.5:x<.82?.17+.33*(1+Math.cos(Math.PI*(x-.44)/.38))/2:.17, lab:[.05,.41], cap:.85, foil:0},                          // Riesling flute: tall and slender
+  prov: {len:3.6, r:x=>x<.62?.5-.11*Math.pow((x-.30)/.32,2):x<.80?.19+.20*(1+Math.cos(Math.PI*(x-.62)/.18))/2:.19, lab:[.10,.52], cap:.84, foil:0} // Provence: curved amphora
+};
+function shapeR(S,x){ let r=S.r(x); if(x>.965) r+=.035; if(x<.03) r*=.82+6*x; return Math.max(.05,Math.min(.5,r)); }
+// Glass and capsule colors that real bottles of each kind tend to have
+function glassFor(w){
+  const k=w?w.k:"red", s=w?w.s:"bdx", reg=w?w.r:"";
+  if(k==="spark") return {g:["#2c4634","#101a13"],cap:"#cdb06a",wine:null};
+  if(k==="rose") return {g:["#f4d7da","#d99aa4"],cap:"#efe6da",wine:"#e7a3ad",paper:"#fbf7f2"};
+  if(k==="white"){
+    if(s==="flute") return /Rheingau/.test(reg)?{g:["#8a5a2c","#4a2a12"],cap:"#e8e4da",wine:null}:{g:["#5fa36a","#2c5a35"],cap:"#e8e4da",wine:null};
+    if(s==="burg") return {g:["#9aa05a","#5a5f2c"],cap:"#c9b47a",wine:null};
+    return {g:["#e9e6cf","#b9b48a"],cap:"#c8c8c8",wine:"#e6d98a",paper:"#fbfaf4"}; // clear glass shows the pale wine
+  }
+  if(s==="burg") return {g:["#4d4a26","#1e1c0e"],cap:"#2a1416",wine:null};
+  return {g:["#2c4632","#0e1610"],cap:"#7b2430",wine:null};
+}
+function bmap(q){ // screen corners: top-left, top-right, bottom-right, bottom-left; necks always point right
   let TL=q[3],TR=q[2],BR=q[1],BL=q[0]; if(TR[0]<TL[0]){ TL=q[2]; TR=q[3]; BR=q[0]; BL=q[1]; }
   return (x,y)=>{ const tx=TL[0]+(TR[0]-TL[0])*x, ty=TL[1]+(TR[1]-TL[1])*x, bx=BL[0]+(BR[0]-BL[0])*x, by=BL[1]+(BR[1]-BL[1])*x; return [tx+(bx-tx)*y, ty+(by-ty)*y]; };
 }
-function bottlePath(M,shape,x0,x1){ const pts=[]; for(let i=0;i<=40;i++){ const x=x0+(x1-x0)*i/40; pts.push(M(x,.5-profile(shape,x))); } for(let i=40;i>=0;i--){ const x=x0+(x1-x0)*i/40; pts.push(M(x,.5+profile(shape,x))); } return pts; }
 function poly(pts){ cx.beginPath(); cx.moveTo(pts[0][0],pts[0][1]); for(let i=1;i<pts.length;i++) cx.lineTo(pts[i][0],pts[i][1]); cx.closePath(); }
+function band(B,S,a,b,inset){ const p=[]; for(let i=0;i<=24;i++){ const x=a+(b-a)*i/24; p.push(B(x,.5-shapeR(S,x)-inset)); } for(let i=24;i>=0;i--){ const x=a+(b-a)*i/24; p.push(B(x,.5+shapeR(S,x)+inset)); } return p; }
 function drawBottle(q,id,st,detail){
-  const s=slot(id), w=info(id), M=bmap(q), bb=bbox(q);
+  const s=slot(id), w=info(id), M=bmap(q), cw=Math.hypot(...[0,1].map(i=>M(1,.5)[i]-M(0,.5)[i])), ch=Math.hypot(...[0,1].map(i=>M(.5,1)[i]-M(.5,0)[i]));
+  if(!(cw>3&&ch>3)) return;
   if(st==="empty"){ poly(q); cx.setLineDash([3,3]); cx.strokeStyle="#4a3f41"; cx.lineWidth=1; cx.stroke(); cx.setLineDash([]); return; }
-  const kind=w?w.k:"red", shape=w?w.s:"bdx", g=GLASS[kind]||GLASS.red, ghost=st==="out";
-  const body=bottlePath(M,shape,.02,.985);
-  // glass
-  cx.save(); cx.globalAlpha*=ghost?.32:1;
-  poly(body); const top=M(.5,.08), bot=M(.5,.92), gr=cx.createLinearGradient(top[0],top[1],bot[0],bot[1]);
-  gr.addColorStop(0,g[1]); gr.addColorStop(.35,g[0]); gr.addColorStop(1,"#0b0d0b"); cx.fillStyle=gr; cx.fill();
-  // highlight along the top of the glass
-  const hl=[]; for(let i=0;i<=20;i++){ const x=.06+.84*i/20; hl.push(M(x,.5-profile(shape,x)*.72)); } for(let i=20;i>=0;i--){ const x=.06+.84*i/20; hl.push(M(x,.5-profile(shape,x)*.52)); }
-  poly(hl); cx.fillStyle="rgba(255,255,255,.13)"; cx.fill();
-  poly(body); cx.strokeStyle=kind==="rose"?"rgba(255,235,240,.55)":"rgba(214,232,206,.32)"; cx.lineWidth=1; cx.stroke(); // glass rim so the shape reads on the dark rack
-  // capsule (foil) on the neck
-  const capA=shape==="champ"?.80:.86, cap=[]; for(let i=0;i<=12;i++){ const x=capA+(.985-capA)*i/12; cap.push(M(x,.5-profile(shape,x)-.012)); } for(let i=12;i>=0;i--){ const x=capA+(.985-capA)*i/12; cap.push(M(x,.5+profile(shape,x)+.012)); }
-  poly(cap); cx.fillStyle=kind==="spark"?"#c9a36a":kind==="white"?"#c9c2b4":kind==="rose"?"#e8d9c8":"#7b2430"; cx.fill();
+  const S=SHAPES[w&&w.s]||SHAPES.bdx, G=glassFor(w), ghost=st==="out", mag=w&&/magnum/i.test(w.g||"");
+  // the bottle sits in the top part of the slot; the caption goes underneath; the stock count sits past the neck
+  const capH=detail?Math.min(30,ch*.44):0, areaH=ch-capH-ch*.06;
+  const pr=Math.min(12,areaH*.34,cw*.075), pill=pr>=6.5, cnt=s.c==null?"?":String(s.c);
+  let pw=0; if(pill){ cx.font="700 "+(pr*1.25).toFixed(1)+"px "+FONT; pw=Math.max(pr*2,cx.measureText(cnt).width+pr*.9); }
+  const gap=pill?Math.max(3,pr*.3):0, availW=cw*.98-(pill?pw+gap:0);
+  const dia0=Math.min(areaH*.92,availW/S.len)*(mag?1.08:1), len=dia0*S.len; if(!(dia0>1)) return;
+  const top=detail?Math.max(ch*.03,(ch-(dia0+4+capH))/2):(ch-dia0)/2, x0=(cw-(len+(pill?gap+pw:0)))/2/cw, yc=(top+dia0/2)/ch, dx=len/cw, dy=dia0/ch;
+  const B=(bx,by)=>M(x0+bx*dx, yc+(by-.5)*dy);
+  const body=band(B,S,0,1,0);
+  cx.save(); cx.globalAlpha*=ghost?.3:1;
+  // glass, lit from above
+  poly(body); const t=B(.5,0), b=B(.5,1), gr=cx.createLinearGradient(t[0],t[1],b[0],b[1]); gr.addColorStop(0,G.g[0]); gr.addColorStop(.55,G.g[1]); gr.addColorStop(1,mixHex(G.g[1],"#000000",.45)); cx.fillStyle=gr; cx.fill();
+  if(G.wine){ poly(band(B,S,.03,.62,-.09)); cx.fillStyle=G.wine; cx.globalAlpha*=.55; cx.fill(); cx.globalAlpha/=.55; }
+  const hl=[]; for(let i=0;i<=24;i++){ const x=.04+.9*i/24; hl.push(B(x,.5-shapeR(S,x)*.78)); } for(let i=24;i>=0;i--){ const x=.04+.9*i/24; hl.push(B(x,.5-shapeR(S,x)*.55)); }
+  poly(hl); cx.fillStyle="rgba(255,255,255,.18)"; cx.fill();
+  // base ring (punt) on the left end
+  if(dia0>=10){ const p0=B(.012,.5-shapeR(S,.012)*.9), p1=B(.012,.5+shapeR(S,.012)*.9); cx.strokeStyle="rgba(0,0,0,.35)"; cx.lineWidth=Math.max(1,dia0*.05); cx.beginPath(); cx.moveTo(p0[0],p0[1]); cx.lineTo(p1[0],p1[1]); cx.stroke(); }
+  // capsule or foil, plus a wire cage on sparkling
+  poly(band(B,S,S.cap,1,.012)); cx.fillStyle=G.cap; cx.fill();
+  if(S.foil&&dia0>=8){ cx.strokeStyle="rgba(60,40,10,.45)"; cx.lineWidth=1; for(const fx of [S.cap+.05,.9]){ const a=B(fx,.5-shapeR(S,fx)-.012), c=B(fx,.5+shapeR(S,fx)+.012); cx.beginPath(); cx.moveTo(a[0],a[1]); cx.lineTo(c[0],c[1]); cx.stroke(); } }
+  // label: paper, with the country color as a band so the glass reads first
+  const ccol=w?CCOL[w.c]||CCOL[""]:CCOL[""], paper=G.paper||"#efe6d0", L=[B(S.lab[0],.10),B(S.lab[1],.10),B(S.lab[1],.90),B(S.lab[0],.90)];
+  poly(L); cx.fillStyle=paper; cx.fill();
+  const bandH=detail?.07:.22, st1=[B(S.lab[0],.10),B(S.lab[1],.10),B(S.lab[1],.10+bandH),B(S.lab[0],.10+bandH)]; poly(st1); cx.fillStyle=ccol; cx.fill();
+  if(detail){ const st2=[B(S.lab[0],.90-bandH),B(S.lab[1],.90-bandH),B(S.lab[1],.90),B(S.lab[0],.90)]; poly(st2); cx.fill(); }
+  poly(L); cx.strokeStyle="rgba(0,0,0,.28)"; cx.lineWidth=.8; cx.stroke();
   cx.restore();
-  if(ghost){ poly(body); cx.setLineDash([4,3]); cx.strokeStyle="rgba(255,90,79,.85)"; cx.lineWidth=1.2; cx.stroke(); cx.setLineDash([]); }
-  // label on the body, region color down its left edge
-  const ccol=w?CCOL[w.c]||CCOL[""]:CCOL[""], lx0=.045, lx1=shape==="bdx"?.76:shape==="flute"?.72:.74, ly=shape==="flute"?.21:.15;
-  const L=[M(lx0,ly),M(lx1,ly),M(lx1,1-ly),M(lx0,1-ly)];
-  cx.save(); cx.globalAlpha*=ghost?.45:1;
-  poly(L); cx.fillStyle=detail?"#efe6d2":ccol; cx.fill();
+  poly(body); cx.strokeStyle=ghost?"rgba(255,90,79,.85)":"rgba(230,240,225,.38)"; cx.lineWidth=ghost?1.2:1; if(ghost) cx.setLineDash([4,3]); cx.stroke(); cx.setLineDash([]);
   if(detail){
-    const band=[M(lx0,ly),M(lx0+.025,ly),M(lx0+.025,1-ly),M(lx0,1-ly)]; poly(band); cx.fillStyle=ccol; cx.fill();
-    const lb=bbox(L), lw=lb[2]-lb[0], lh=lb[3]-lb[1], pad=Math.max(5,lw*.045), fs=Math.max(10,Math.min(14,lh*.36)), x=lb[0]+pad+2;
-    cx.save(); poly(L); cx.clip(); cx.textAlign="left"; cx.textBaseline="alphabetic";
-    cx.font="700 "+(fs*.74).toFixed(1)+"px "+FONT; cx.fillStyle="#5a4733";
-    const reg=w?shortRegion(w.r):"";
-    cx.fillText(trunc(id+(reg?"  "+reg:""),lb[2]-x-3),x,lb[1]+fs*.86);
-    cx.font="700 "+fs.toFixed(1)+"px "+FONT; cx.fillStyle="#1b1414";
-    fitLines(s.n,lb[2]-x-3,lh>=fs*2.9?2:1).forEach((l,i)=>cx.fillText(l,x,lb[1]+fs*1.9+i*fs*1.02));
-    cx.restore();
+    const lb=bbox(L), lw=lb[2]-lb[0]-3, lh=(lb[3]-lb[1])*(1-2*bandH/.80);
+    const reg=w?shortRegion(w.r).toUpperCase():"", mx=(lb[0]+lb[2])/2, my=(lb[1]+lb[3])/2+.5;
+    if(reg&&lh>=9){ cx.save(); poly(L); cx.clip(); cx.globalAlpha=ghost?.5:1; cx.fillStyle="#2a1e14"; cx.textAlign="center"; cx.textBaseline="middle";
+      // largest size that fits, squeezing the letters up to 30% like a condensed label face
+      const size=(lines,max,min)=>{ for(let fs=max;fs>=min;fs-=.25){ cx.font="700 "+fs.toFixed(2)+"px "+FONT; const k=lw/Math.max(...lines.map(l=>cx.measureText(l).width)); if(k>=.7) return [fs,Math.min(1,k)]; } return null; };
+      const put=(l,y,k)=>{ cx.save(); cx.translate(mx,y); cx.scale(k,1); cx.fillText(l,0,0); cx.restore(); };
+      let f=size([reg],Math.min(lh*.5,12),5.5);
+      if(f&&f[0]>=7) put(reg,my,f[1]);
+      else { // two lines, split at the space or hyphen nearest the middle
+        const sp=[...reg].map((c,i)=>c===" "||c==="-"?i:-1).filter(i=>i>0); let best=null;
+        for(const i of sp){ const a=reg[i]==="-"?reg.slice(0,i+1):reg.slice(0,i), b2=reg.slice(i+1); const m=Math.max(a.length,b2.length); if(!best||m<best[2]) best=[a,b2,m]; }
+        const f2=best&&size(best.slice(0,2),Math.min(lh*.46,10),5.5);
+        if(f2&&(!f||f2[0]>f[0])){ cx.font="700 "+f2[0].toFixed(2)+"px "+FONT; put(best[0],my-f2[0]*.56,f2[1]); put(best[1],my+f2[0]*.6,f2[1]); }
+        else if(f){ cx.font="700 "+f[0].toFixed(2)+"px "+FONT; put(reg,my,f[1]); }
+      }
+      cx.restore(); }
+    // caption under the bottle: wine name, then slot code, region and vintage
+    const c0=M(.03,(top+dia0+4)/ch), fs=Math.max(10.5,Math.min(13.5,capH*.46)), maxW=cw*.94;
+    cx.textAlign="left"; cx.textBaseline="top"; cx.globalAlpha=ghost?.55:1;
+    cx.font="700 "+fs.toFixed(1)+"px "+FONT; cx.fillStyle="#efe7e2"; cx.fillText(trunc(s.n,maxW),c0[0],c0[1]);
+    cx.font="600 "+(fs*.8).toFixed(1)+"px "+FONT; cx.fillStyle="#c9a36a"; cx.fillText(trunc(id+(w&&w.r&&w.c?"  ·  "+shortRegion(w.r):"")+(s.vt?"  ·  "+s.vt:"")+(mag?"  ·  magnum":""),maxW),c0[0],c0[1]+fs*1.12);
+    cx.globalAlpha=1;
   }
-  cx.restore();
-  // stock on the neck: green stocked, amber below par, red out, grey not counted
-  const cnt=s.c==null?"?":String(s.c), c1=M(.895,.5), r=Math.max(4,Math.min(13,(bb[3]-bb[1])*.27,(bb[2]-bb[0])*.085));
-  if(detail||r>=7){
-    cx.font="700 "+(r*1.25).toFixed(1)+"px "+FONT; const tw=Math.max(r*2,cx.measureText(cnt).width+r*.9);
-    cx.beginPath(); const x=c1[0]-tw/2, y=c1[1]-r; const rr=r; cx.moveTo(x+rr,y); cx.arcTo(x+tw,y,x+tw,y+2*r,rr); cx.arcTo(x+tw,y+2*r,x,y+2*r,rr); cx.arcTo(x,y+2*r,x,y,rr); cx.arcTo(x,y,x+tw,y,rr); cx.closePath();
-    cx.fillStyle=st==="unk"?"#8a7d7f":COL[st]; cx.fill(); cx.strokeStyle="#141112"; cx.lineWidth=1.5; cx.stroke();
-    cx.fillStyle="#141112"; cx.textAlign="center"; cx.textBaseline="middle"; cx.fillText(cnt,c1[0],c1[1]+.5);
-  } else { const d=M(.88,.5); cx.beginPath(); cx.arc(d[0],d[1],Math.max(2,r*.55),0,Math.PI*2); cx.fillStyle=st==="unk"?"#8a7d7f":COL[st]; cx.fill(); }
+  // stock: a count pill past the neck when there is room; otherwise only a dot when it needs attention
+  const sc=st==="unk"?"#8a7d7f":COL[st];
+  if(pill){ const tip=B(1,.5), x=tip[0]+gap, y=tip[1]-pr;
+    cx.beginPath(); cx.moveTo(x+pr,y); cx.arcTo(x+pw,y,x+pw,y+2*pr,pr); cx.arcTo(x+pw,y+2*pr,x,y+2*pr,pr); cx.arcTo(x,y+2*pr,x,y,pr); cx.arcTo(x,y,x+pw,y,pr); cx.closePath();
+    cx.fillStyle=sc; cx.fill(); cx.strokeStyle="#141112"; cx.lineWidth=1.5; cx.stroke();
+    cx.font="700 "+(pr*1.25).toFixed(1)+"px "+FONT; cx.fillStyle="#141112"; cx.textAlign="center"; cx.textBaseline="middle"; cx.fillText(cnt,x+pw/2,tip[1]+.5); }
+  else if(st==="low"||st==="out"){ const tip=B(1,.5); cx.beginPath(); cx.arc(tip[0]+2.5,tip[1],Math.max(2.2,dia0*.3),0,Math.PI*2); cx.fillStyle=sc; cx.fill(); cx.strokeStyle="#141112"; cx.lineWidth=1; cx.stroke(); }
 }
 function renderLegend(){
   const el=document.getElementById("legend"); if(!el) return; if(!BOTTLES){ el.hidden=true; return; }
   const n={}; for(const s of slotList()){ const w=info(s.id); if(w&&w.c) n[w.c]=(n[w.c]||0)+1; }
-  const order=Object.keys(n).sort((a,b)=>n[b]-n[a]);
   el.hidden=false;
-  el.innerHTML=order.map(c=>`<button class="lg" data-c="${esc(c)}" aria-pressed="${nrm(query)===nrm(c)}"><i style="background:${CCOL[c]||CCOL[""]}"></i>${esc(c)}</button>`).join("")+
+  el.innerHTML=Object.keys(n).sort((a,b)=>n[b]-n[a]).map(c=>`<button class="lg" data-c="${esc(c)}" aria-pressed="${nrm(query)===nrm(c)}"><i style="background:${CCOL[c]||CCOL[""]}"></i>${esc(c)}</button>`).join("")+
     `<span class="lg-note">Neck: <i style="background:${COL.ok}"></i>stocked <i style="background:${COL.low}"></i>low <i style="background:${COL.out}"></i>out</span>`;
 }
 document.getElementById("legend").addEventListener("click",e=>{ const b=e.target.closest("[data-c]"); if(!b) return; const inp=document.getElementById("search"); inp.value=nrm(query)===nrm(b.dataset.c)?"":b.dataset.c; inp.dispatchEvent(new Event("input")); });
@@ -733,16 +765,16 @@ function drawOutside(){
     path(quad(f,0,W,0,H)); cx.fillStyle=front?"rgba(22,16,17,.92)":"rgba(40,22,24,.55)"; cx.fill();
     if(!front) continue;
     const rowPx=Math.abs(proj(faceXYZ(f,HW,1))[1]-proj(faceXYZ(f,HW,0))[1]);
-    if(f===3){ drawDoor(quad(3,.8,W-.8,0,DOOR_U),proj(faceXYZ(3,HW,DOOR_U*.5))); continue; }
+    if(f===3){ drawDoor(quad(3,.8,W-.8,0,doorU()),proj(faceXYZ(3,HW,doorU()*.5))); continue; }
     cx.strokeStyle="rgba(201,163,106,.32)"; cx.lineWidth=Math.max(.6,rowPx*.05);
     for(let r=0;r<=H;r++){ const a=proj(faceXYZ(f,0,r)), b=proj(faceXYZ(f,W,r)); cx.beginPath(); cx.moveTo(a[0],a[1]); cx.lineTo(b[0],b[1]); cx.stroke(); }
     const sec=S.sections.find(s=>FACE_OF[s.id]===f); if(!sec) continue;
     const L=LAY[sec.id], n=sec.cols.length, cw=W/n; let big=false;
     sec.rows.forEach((row,ri)=>sec.cols.forEach((c,ci)=>{
       const id=row+c, st=status(id), u0=(n-1-ci)*cw, v0=L.y[ri], h=L.h[ri]; // column A sits on the right when you stand outside
-      const cell=BOTTLES?quad(f,u0+.06,u0+cw-.06,v0+.03,v0+h-.03):quad(f,u0+.12,u0+cw-.12,v0+.06,v0+h-.06), bb=bbox(cell), hit=matches(id);
+      const cell=BOTTLES?quad(f,u0+.05,u0+cw-.05,v0+.03,v0+h-.03):quad(f,u0+.12,u0+cw-.12,v0+.06,v0+h-.06), bb=bbox(cell), hit=matches(id);
       cx.globalAlpha=query&&!hit?.22:1;
-      if(BOTTLES){ const det=rowPx>=24&&bb[2]-bb[0]>=58; if(det) big=true; drawBottle(cell,id,st,det); }
+      if(BOTTLES){ const det=rowPx*rowScale()>=40&&bb[2]-bb[0]>=70; if(det) big=true; drawBottle(cell,id,st,det); }
       else if(rowPx>=24&&bb[2]-bb[0]>=58){ big=true; drawLabel(cell,id,st); }
       else{
         if(st!=="empty"&&st!=="out"){
@@ -772,7 +804,7 @@ function drawInside(){
     const bg=ipoly(f,0,W,0,H); if(!bg) continue;
     path(bg); cx.fillStyle=f===3?"#20181a":"#161213"; cx.fill();
     const mid=icam(faceXYZ(f,HW,0)); if(mid[2]>0.6) titles.push([CW/2+F*mid[0]/mid[2],f]);
-    if(f===3){ const d=ipoly(3,.8,W-.8,0,DOOR_U); if(d){ const bb=bbox(d); drawDoor(d,[(Math.max(bb[0],0)+Math.min(bb[2],CW))/2,Math.max(40,Math.min(CH-40,(bb[1]+bb[3])/2))]); } continue; }
+    if(f===3){ const d=ipoly(3,.8,W-.8,0,doorU()); if(d){ const bb=bbox(d); drawDoor(d,[(Math.max(bb[0],0)+Math.min(bb[2],CW))/2,Math.max(40,Math.min(CH-40,(bb[1]+bb[3])/2))]); } continue; }
     const sec=S.sections.find(s=>FACE_OF[s.id]===f); if(!sec) continue;
     const L=LAY[sec.id], n=sec.cols.length, cw=W/n;
     sec.rows.forEach((row,ri)=>sec.cols.forEach((c,ci)=>{
@@ -782,13 +814,13 @@ function drawInside(){
       const st=status(id), hit=matches(id);
       cx.globalAlpha=query&&!hit?.25:1;
       const hl=Math.abs(cell[cell.length-1][1]-cell[0][1]), hr=cell.length===4?Math.abs(cell[2][1]-cell[1][1]):0;
-      const flat=cell.length===4&&bb[2]-bb[0]>=58&&Math.min(hl,hr)>=20&&Math.min(hl,hr)/Math.max(hl,hr)>=.6;
+      const flat=cell.length===4&&bb[2]-bb[0]>=58&&Math.min(hl,hr)>=(BOTTLES?40:20)&&Math.min(hl,hr)/Math.max(hl,hr)>=.6;
       if(BOTTLES&&cell.length===4) drawBottle(cell,id,st,flat);
       else if(flat) drawLabel(cell,id,st);
       else{ path(cell); cx.fillStyle=TINT[st]; cx.fill(); cx.strokeStyle=COL[st]; cx.lineWidth=1; cx.stroke(); }
       outline(cell,id,hit); polys.push({id,q:cell});
     }));
-    const dl=ipoly(f,0,W,DOOR_U-.03,DOOR_U+.03);
+    const dl=ipoly(f,0,W,doorU()-.03,doorU()+.03);
     if(dl){ path(dl); cx.fillStyle="rgba(201,163,106,.95)"; cx.fill(); const bb=bbox(dl), x=Math.max(bb[0],0)+6;
       if(bb[1]>24&&bb[1]<CH&&bb[2]-x>90){ cx.font="600 11px "+FONT; cx.textAlign="left"; cx.textBaseline="alphabetic"; const tx="DOOR TOP 7 ft 5 in"; cx.fillStyle="#141112"; cx.fillRect(x-3,bb[1]-15,cx.measureText(tx).width+6,14); cx.fillStyle="#c9a36a"; cx.fillText(tx,x,bb[1]-4); } }
   }
@@ -837,7 +869,7 @@ function zoomBy(m){ if(mode==="in") cam.izoom*=m; else { const z=Math.max(.8,Mat
 cv.addEventListener("wheel",e=>{ e.preventDefault(); zoomBy(e.deltaY<0?1.12:.89); },{passive:false});
 document.getElementById("zin").onclick=()=>zoomBy(1.4);
 document.getElementById("zout").onclick=()=>zoomBy(1/1.4);
-document.getElementById("zfit").onclick=()=>{ if(mode==="in") go({izoom:1,eye:EYE0}); else go({zoom:1,pan:0}); };
+document.getElementById("zfit").onclick=()=>{ if(mode==="in") go({izoom:1,eye:eye0()}); else go({zoom:1,pan:0}); };
 function setMode(m){ mode=m; try{ localStorage.setItem(LS+"-mode",m); }catch(e){} target=null;
   document.querySelectorAll("#modes button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.m===m));
   document.getElementById("hint").textContent=m==="in"?"You are standing inside with the door behind you. Drag to look around and to move up or down. Columns read A, B, C left to right in here.":"You are looking through the glass, so columns run C, B, A left to right, the mirror of inside. Pinch to zoom in until the names show.";
@@ -847,7 +879,7 @@ function whereText(id){
   const s=slotList().find(x=>x.id===id); if(!s||!LAY[s.sec.id]) return "";
   const f=FACE_OF[s.sec.id], side=["on your left as you walk in","straight ahead as you walk in","on your right as you walk in"][f]||"";
   const n=s.sec.cols.length, ci=s.sec.cols.indexOf(s.col), pos=n<2?"":(ci===0?"Left":ci===n-1?"Right":"Middle")+" spot, ";
-  const L=LAY[s.sec.id], ri=s.sec.rows.indexOf(s.row), high=L.y[ri]+L.h[ri]/2>DOOR_U;
+  const L=LAY[s.sec.id], ri=s.sec.rows.indexOf(s.row), high=L.y[ri]+L.h[ri]/2>doorU();
   return s.sec.id+"s wall, "+side+". "+pos+"row "+(ri+1)+" up from the floor, "+(high?"above the door top, so bring the ladder.":"below the door top.");
 }
 
@@ -932,7 +964,7 @@ function renderUsage(){
 function shortWhere(id){
   const s=slotList().find(x=>x.id===id); if(!s||!LAY[s.sec.id]) return "";
   const side=["on your left","straight ahead","on your right"][FACE_OF[s.sec.id]]||"", n=s.sec.cols.length, ci=s.sec.cols.indexOf(s.col), L=LAY[s.sec.id], ri=s.sec.rows.indexOf(s.row);
-  return s.sec.id+"s wall "+side+", "+(n<2?"":(ci===0?"left":ci===n-1?"right":"middle")+" spot, ")+"row "+(ri+1)+(L.y[ri]+L.h[ri]/2>DOOR_U?", needs the ladder":"");
+  return s.sec.id+"s wall "+side+", "+(n<2?"":(ci===0?"left":ci===n-1?"right":"middle")+" spot, ")+"row "+(ri+1)+(L.y[ri]+L.h[ri]/2>doorU()?", needs the ladder":"");
 }
 function renderResults(){
   const el=document.getElementById("results"); if(!HIT){ el.innerHTML=""; return; }
