@@ -161,6 +161,7 @@ h2{font-family:var(--display);font-size:20px;text-transform:uppercase;letter-spa
   <div class="bar2">
     <div class="modes" id="modes"><button data-m="out" aria-pressed="true">Outside</button><button data-m="in" aria-pressed="false">Inside</button></div>
     <div class="faces" id="faces" aria-label="Turn to a wall"></div>
+    <button class="btn" id="lookbtn" hidden>Plain look</button>
   </div>
   <div id="legend" hidden></div>
   <div id="stage">
@@ -648,7 +649,8 @@ function drawDoor(q,labelAt){
 }
 function draw(){ if(!CW) return; cx.clearRect(0,0,CW,CH); polys=[]; GLOW=[]; if(mode==="in") drawInside(); else drawOutside(); for(const [q,id] of GLOW) pullGlow(q,id); }
 /* ---------- bottle look: each slot drawn as its bottle, labelled with its region ---------- */
-const BOTTLES=window.LOOK==="bottles";
+let BOTTLES=(()=>{ if(!window.WINEINFO) return false; try{ const v=localStorage.getItem(LS+"-look"); if(v) return v==="bottles"; }catch(e){} return window.LOOK!=="plain"; })();
+function setLook(b){ BOTTLES=b; try{ localStorage.setItem(LS+"-look",b?"bottles":"plain"); }catch(e){} const lb=document.getElementById("lookbtn"); if(lb){ lb.textContent=b?"Plain look":"Bottle look"; } renderAll(true); }
 const CCOL={"USA":"#e3b04b","France":"#7aa2f7","Italy":"#5cc48a","Spain":"#f2845c","Germany":"#b998f5","Portugal":"#d9a07a","Argentina":"#65cfe8","Chile":"#f19ad1","Australia":"#f1d36a","South Africa":"#5fd6c3","New Zealand":"#9ad86f","Mexico":"#e0607f","":"#9a8f8c"};
 const GLASS={red:["#1d2b20","#2c4030"],white:["#5f7a47","#86a36a"],spark:["#1f3324","#2f4a34"],rose:["#d79aa3","#ecc0c6"]};
 function info(id){ const w=window.WINEINFO&&window.WINEINFO[id], s=slot(id); if(!w||!s.n) return null; return nrm(w.n).replace(/[^a-z0-9]/g,"")===nrm(s.n).replace(/[^a-z0-9]/g,"")?w:null; }
@@ -953,6 +955,7 @@ document.getElementById("search").addEventListener("input",e=>{ clearTimeout(sea
 },140); });
 window.addEventListener("resize",resize);
 if(!STANDALONE) document.getElementById("moved").hidden=false;
+{ const lb=document.getElementById("lookbtn"); if(window.WINEINFO){ lb.hidden=false; lb.textContent=BOTTLES?"Plain look":"Bottle look"; lb.onclick=()=>setLook(!BOTTLES); } }
 initStore(); resize(); setMode(mode);
 if(document.fonts&&document.fonts.ready) document.fonts.ready.then(draw);
 </script>

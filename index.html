@@ -60,6 +60,11 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--brass);outline-
 #search{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
 #search::placeholder{color:var(--muted)}
 #results{margin-top:6px}
+#legend{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 8px}
+#legend .lg{display:inline-flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:4px 10px;font-size:13px;min-height:30px}
+#legend .lg[aria-pressed="true"]{border-color:var(--brass);background:var(--panel-2)}
+#legend i{width:10px;height:10px;border-radius:50%;display:inline-block}
+#legend .lg-note{font-size:12px;color:var(--muted);display:inline-flex;align-items:center;gap:4px;margin-left:4px}
 #pulls{border:1px solid var(--pull);border-radius:10px;background:var(--panel);padding:10px 12px;margin:0 0 12px;box-shadow:0 0 0 1px rgba(77,216,255,.15),0 0 18px rgba(77,216,255,.12)}
 #pulls .ph{display:flex;align-items:center;gap:10px;margin-bottom:6px}
 #pulls .ph b{font-family:var(--display);font-size:20px;text-transform:uppercase;letter-spacing:.04em;color:var(--pull)}
@@ -156,7 +161,9 @@ h2{font-family:var(--display);font-size:20px;text-transform:uppercase;letter-spa
   <div class="bar2">
     <div class="modes" id="modes"><button data-m="out" aria-pressed="true">Outside</button><button data-m="in" aria-pressed="false">Inside</button></div>
     <div class="faces" id="faces" aria-label="Turn to a wall"></div>
+    <button class="btn" id="lookbtn" hidden>Plain look</button>
   </div>
+  <div id="legend" hidden></div>
   <div id="stage">
     <canvas id="cv"></canvas>
     <div class="zoom">
@@ -176,6 +183,7 @@ h2{font-family:var(--display);font-size:20px;text-transform:uppercase;letter-spa
 <script src="wines.js"></script>
 <script src="counts.js"></script>
 <script src="config.js"></script>
+<script src="regions.js"></script>
 <script>
 "use strict";
 /* ---------- rack map from the printed slot sheet (9/16), bottom row first ---------- */
@@ -278,7 +286,8 @@ function slot(id){ return S.slots[id]||{n:"",c:null,p:1}; }
 let WIDX={}, HAY={}, HIT=null;
 function nrm(t){ return String(t||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase(); }
 function reindex(){ WIDX={}; HAY={};
-  for(const s of slotList()){ const d=S.slots[s.id]; if(!d) continue; if(d.w)(WIDX[d.w]=WIDX[d.w]||[]).push(s.id); HAY[s.id]=nrm(s.id+" "+d.n+" "+(d.w||"")+" "+(d.vt||"")); }
+  for(const s of slotList()){ const d=S.slots[s.id]; if(!d) continue; if(d.w)(WIDX[d.w]=WIDX[d.w]||[]).push(s.id); const wi=window.WINEINFO&&window.WINEINFO[s.id]&&nrm(window.WINEINFO[s.id].n).replace(/[^a-z0-9]/g,"")===nrm(d.n).replace(/[^a-z0-9]/g,"")?window.WINEINFO[s.id]:null;
+    HAY[s.id]=nrm(s.id+" "+d.n+" "+(d.w||"")+" "+(d.vt||"")+(wi?" "+wi.r+" "+wi.c+" "+wi.g:"")); }
   const toks=nrm(query).split(/\s+/).filter(Boolean);
   HIT=toks.length?new Set(Object.keys(HAY).filter(id=>toks.every(t=>HAY[id].includes(t)))):null; }
 function sibs(id){ const w=slot(id).w; return (w&&WIDX[w])||[id]; }
@@ -638,6 +647,84 @@ function drawDoor(q,labelAt){
   if(labelAt){ cx.fillStyle="#c9a36a"; cx.textAlign="center"; cx.textBaseline="middle"; cx.font="700 15px "+FONT; cx.fillText("DOOR",labelAt[0],labelAt[1]-9); cx.font="600 13px "+FONT; cx.fillText("7 ft 5 in",labelAt[0],labelAt[1]+9); }
 }
 function draw(){ if(!CW) return; cx.clearRect(0,0,CW,CH); polys=[]; GLOW=[]; if(mode==="in") drawInside(); else drawOutside(); for(const [q,id] of GLOW) pullGlow(q,id); }
+/* ---------- bottle look: each slot drawn as its bottle, labelled with its region ---------- */
+let BOTTLES=(()=>{ if(!window.WINEINFO) return false; try{ const v=localStorage.getItem(LS+"-look"); if(v) return v==="bottles"; }catch(e){} return window.LOOK!=="plain"; })();
+function setLook(b){ BOTTLES=b; try{ localStorage.setItem(LS+"-look",b?"bottles":"plain"); }catch(e){} const lb=document.getElementById("lookbtn"); if(lb){ lb.textContent=b?"Plain look":"Bottle look"; } renderAll(true); }
+const CCOL={"USA":"#e3b04b","France":"#7aa2f7","Italy":"#5cc48a","Spain":"#f2845c","Germany":"#b998f5","Portugal":"#d9a07a","Argentina":"#65cfe8","Chile":"#f19ad1","Australia":"#f1d36a","South Africa":"#5fd6c3","New Zealand":"#9ad86f","Mexico":"#e0607f","":"#9a8f8c"};
+const GLASS={red:["#1d2b20","#2c4030"],white:["#5f7a47","#86a36a"],spark:["#1f3324","#2f4a34"],rose:["#d79aa3","#ecc0c6"]};
+function info(id){ const w=window.WINEINFO&&window.WINEINFO[id], s=slot(id); if(!w||!s.n) return null; return nrm(w.n).replace(/[^a-z0-9]/g,"")===nrm(s.n).replace(/[^a-z0-9]/g,"")?w:null; }
+// half-height of the bottle (0..0.5 of the slot) along its length, base on the left, neck on the right
+function profile(shape,x){
+  const ease=t=>t<=0?0:t>=1?1:t*t*(3-2*t);
+  const P={bdx:{r:.40,b:.76,e:.82,n:.13},burg:{r:.41,b:.70,e:.85,n:.13},champ:{r:.43,b:.68,e:.84,n:.15},flute:{r:.33,b:.70,e:.88,n:.11},prov:{r:.39,b:.72,e:.83,n:.14}}[shape]||{r:.40,b:.76,e:.82,n:.13};
+  let r;
+  if(shape==="prov"){ r=x<P.b?P.r-.05*Math.sin(Math.PI*x/P.b):x<P.e?P.r+(P.n-P.r)*ease((x-P.b)/(P.e-P.b)):P.n; }
+  else if(shape==="bdx"){ const t=(x-P.b)/(P.e-P.b); r=x<P.b?P.r:x<P.e?P.n+(P.r-P.n)*Math.pow(1-t,.6)*(1-t*.15):P.n; }
+  else r=x<P.b?P.r:x<P.e?P.r+(P.n-P.r)*ease((x-P.b)/(P.e-P.b)):P.n;
+  if(x>.94) r+=.025; // lip
+  if(x<.035) r*=.9+2.8*x; // rounded base
+  return r;
+}
+function shortRegion(r){ return String(r||"").split(",")[0].replace(/^Saint-/,"St-").replace(/ Valley$/,"").replace(/^Côtes de /,"").replace(/ Grand Cru$/," GC").trim(); }
+function bmap(q){ // corners as seen on screen: top-left, top-right, bottom-right, bottom-left (neck always points right)
+  let TL=q[3],TR=q[2],BR=q[1],BL=q[0]; if(TR[0]<TL[0]){ TL=q[2]; TR=q[3]; BR=q[0]; BL=q[1]; }
+  return (x,y)=>{ const tx=TL[0]+(TR[0]-TL[0])*x, ty=TL[1]+(TR[1]-TL[1])*x, bx=BL[0]+(BR[0]-BL[0])*x, by=BL[1]+(BR[1]-BL[1])*x; return [tx+(bx-tx)*y, ty+(by-ty)*y]; };
+}
+function bottlePath(M,shape,x0,x1){ const pts=[]; for(let i=0;i<=40;i++){ const x=x0+(x1-x0)*i/40; pts.push(M(x,.5-profile(shape,x))); } for(let i=40;i>=0;i--){ const x=x0+(x1-x0)*i/40; pts.push(M(x,.5+profile(shape,x))); } return pts; }
+function poly(pts){ cx.beginPath(); cx.moveTo(pts[0][0],pts[0][1]); for(let i=1;i<pts.length;i++) cx.lineTo(pts[i][0],pts[i][1]); cx.closePath(); }
+function drawBottle(q,id,st,detail){
+  const s=slot(id), w=info(id), M=bmap(q), bb=bbox(q);
+  if(st==="empty"){ poly(q); cx.setLineDash([3,3]); cx.strokeStyle="#4a3f41"; cx.lineWidth=1; cx.stroke(); cx.setLineDash([]); return; }
+  const kind=w?w.k:"red", shape=w?w.s:"bdx", g=GLASS[kind]||GLASS.red, ghost=st==="out";
+  const body=bottlePath(M,shape,.02,.985);
+  // glass
+  cx.save(); cx.globalAlpha*=ghost?.32:1;
+  poly(body); const top=M(.5,.08), bot=M(.5,.92), gr=cx.createLinearGradient(top[0],top[1],bot[0],bot[1]);
+  gr.addColorStop(0,g[1]); gr.addColorStop(.35,g[0]); gr.addColorStop(1,"#0b0d0b"); cx.fillStyle=gr; cx.fill();
+  // highlight along the top of the glass
+  const hl=[]; for(let i=0;i<=20;i++){ const x=.06+.84*i/20; hl.push(M(x,.5-profile(shape,x)*.72)); } for(let i=20;i>=0;i--){ const x=.06+.84*i/20; hl.push(M(x,.5-profile(shape,x)*.52)); }
+  poly(hl); cx.fillStyle="rgba(255,255,255,.13)"; cx.fill();
+  poly(body); cx.strokeStyle=kind==="rose"?"rgba(255,235,240,.55)":"rgba(214,232,206,.32)"; cx.lineWidth=1; cx.stroke(); // glass rim so the shape reads on the dark rack
+  // capsule (foil) on the neck
+  const capA=shape==="champ"?.80:.86, cap=[]; for(let i=0;i<=12;i++){ const x=capA+(.985-capA)*i/12; cap.push(M(x,.5-profile(shape,x)-.012)); } for(let i=12;i>=0;i--){ const x=capA+(.985-capA)*i/12; cap.push(M(x,.5+profile(shape,x)+.012)); }
+  poly(cap); cx.fillStyle=kind==="spark"?"#c9a36a":kind==="white"?"#c9c2b4":kind==="rose"?"#e8d9c8":"#7b2430"; cx.fill();
+  cx.restore();
+  if(ghost){ poly(body); cx.setLineDash([4,3]); cx.strokeStyle="rgba(255,90,79,.85)"; cx.lineWidth=1.2; cx.stroke(); cx.setLineDash([]); }
+  // label on the body, region color down its left edge
+  const ccol=w?CCOL[w.c]||CCOL[""]:CCOL[""], lx0=.045, lx1=shape==="bdx"?.76:shape==="flute"?.72:.74, ly=shape==="flute"?.21:.15;
+  const L=[M(lx0,ly),M(lx1,ly),M(lx1,1-ly),M(lx0,1-ly)];
+  cx.save(); cx.globalAlpha*=ghost?.45:1;
+  poly(L); cx.fillStyle=detail?"#efe6d2":ccol; cx.fill();
+  if(detail){
+    const band=[M(lx0,ly),M(lx0+.025,ly),M(lx0+.025,1-ly),M(lx0,1-ly)]; poly(band); cx.fillStyle=ccol; cx.fill();
+    const lb=bbox(L), lw=lb[2]-lb[0], lh=lb[3]-lb[1], pad=Math.max(5,lw*.045), fs=Math.max(10,Math.min(14,lh*.36)), x=lb[0]+pad+2;
+    cx.save(); poly(L); cx.clip(); cx.textAlign="left"; cx.textBaseline="alphabetic";
+    cx.font="700 "+(fs*.74).toFixed(1)+"px "+FONT; cx.fillStyle="#5a4733";
+    const reg=w?shortRegion(w.r):"";
+    cx.fillText(trunc(id+(reg?"  "+reg:""),lb[2]-x-3),x,lb[1]+fs*.86);
+    cx.font="700 "+fs.toFixed(1)+"px "+FONT; cx.fillStyle="#1b1414";
+    fitLines(s.n,lb[2]-x-3,lh>=fs*2.9?2:1).forEach((l,i)=>cx.fillText(l,x,lb[1]+fs*1.9+i*fs*1.02));
+    cx.restore();
+  }
+  cx.restore();
+  // stock on the neck: green stocked, amber below par, red out, grey not counted
+  const cnt=s.c==null?"?":String(s.c), c1=M(.895,.5), r=Math.max(4,Math.min(13,(bb[3]-bb[1])*.27,(bb[2]-bb[0])*.085));
+  if(detail||r>=7){
+    cx.font="700 "+(r*1.25).toFixed(1)+"px "+FONT; const tw=Math.max(r*2,cx.measureText(cnt).width+r*.9);
+    cx.beginPath(); const x=c1[0]-tw/2, y=c1[1]-r; const rr=r; cx.moveTo(x+rr,y); cx.arcTo(x+tw,y,x+tw,y+2*r,rr); cx.arcTo(x+tw,y+2*r,x,y+2*r,rr); cx.arcTo(x,y+2*r,x,y,rr); cx.arcTo(x,y,x+tw,y,rr); cx.closePath();
+    cx.fillStyle=st==="unk"?"#8a7d7f":COL[st]; cx.fill(); cx.strokeStyle="#141112"; cx.lineWidth=1.5; cx.stroke();
+    cx.fillStyle="#141112"; cx.textAlign="center"; cx.textBaseline="middle"; cx.fillText(cnt,c1[0],c1[1]+.5);
+  } else { const d=M(.88,.5); cx.beginPath(); cx.arc(d[0],d[1],Math.max(2,r*.55),0,Math.PI*2); cx.fillStyle=st==="unk"?"#8a7d7f":COL[st]; cx.fill(); }
+}
+function renderLegend(){
+  const el=document.getElementById("legend"); if(!el) return; if(!BOTTLES){ el.hidden=true; return; }
+  const n={}; for(const s of slotList()){ const w=info(s.id); if(w&&w.c) n[w.c]=(n[w.c]||0)+1; }
+  const order=Object.keys(n).sort((a,b)=>n[b]-n[a]);
+  el.hidden=false;
+  el.innerHTML=order.map(c=>`<button class="lg" data-c="${esc(c)}" aria-pressed="${nrm(query)===nrm(c)}"><i style="background:${CCOL[c]||CCOL[""]}"></i>${esc(c)}</button>`).join("")+
+    `<span class="lg-note">Neck: <i style="background:${COL.ok}"></i>stocked <i style="background:${COL.low}"></i>low <i style="background:${COL.out}"></i>out</span>`;
+}
+document.getElementById("legend").addEventListener("click",e=>{ const b=e.target.closest("[data-c]"); if(!b) return; const inp=document.getElementById("search"); inp.value=nrm(query)===nrm(b.dataset.c)?"":b.dataset.c; inp.dispatchEvent(new Event("input")); });
 function drawOutside(){
   const H=towerH();
   const faces=[0,1,2,3].map(f=>({f,z:proj(faceXYZ(f,HW,H/2))[2]})).sort((a,b)=>b.z-a.z);
@@ -653,9 +740,10 @@ function drawOutside(){
     const L=LAY[sec.id], n=sec.cols.length, cw=W/n; let big=false;
     sec.rows.forEach((row,ri)=>sec.cols.forEach((c,ci)=>{
       const id=row+c, st=status(id), u0=(n-1-ci)*cw, v0=L.y[ri], h=L.h[ri]; // column A sits on the right when you stand outside
-      const cell=quad(f,u0+.12,u0+cw-.12,v0+.06,v0+h-.06), bb=bbox(cell), hit=matches(id);
+      const cell=BOTTLES?quad(f,u0+.06,u0+cw-.06,v0+.03,v0+h-.03):quad(f,u0+.12,u0+cw-.12,v0+.06,v0+h-.06), bb=bbox(cell), hit=matches(id);
       cx.globalAlpha=query&&!hit?.22:1;
-      if(rowPx>=24&&bb[2]-bb[0]>=58){ big=true; drawLabel(cell,id,st); }
+      if(BOTTLES){ const det=rowPx>=24&&bb[2]-bb[0]>=58; if(det) big=true; drawBottle(cell,id,st,det); }
+      else if(rowPx>=24&&bb[2]-bb[0]>=58){ big=true; drawLabel(cell,id,st); }
       else{
         if(st!=="empty"&&st!=="out"){
           path(quad(f,u0+cw*.34,u0+cw*.92,v0+h*.16,v0+h*.86)); cx.fillStyle=st==="unk"?"#2b2526":"#0e1512"; cx.fill();
@@ -694,7 +782,9 @@ function drawInside(){
       const st=status(id), hit=matches(id);
       cx.globalAlpha=query&&!hit?.25:1;
       const hl=Math.abs(cell[cell.length-1][1]-cell[0][1]), hr=cell.length===4?Math.abs(cell[2][1]-cell[1][1]):0;
-      if(cell.length===4&&bb[2]-bb[0]>=58&&Math.min(hl,hr)>=20&&Math.min(hl,hr)/Math.max(hl,hr)>=.6) drawLabel(cell,id,st);
+      const flat=cell.length===4&&bb[2]-bb[0]>=58&&Math.min(hl,hr)>=20&&Math.min(hl,hr)/Math.max(hl,hr)>=.6;
+      if(BOTTLES&&cell.length===4) drawBottle(cell,id,st,flat);
+      else if(flat) drawLabel(cell,id,st);
       else{ path(cell); cx.fillStyle=TINT[st]; cx.fill(); cx.strokeStyle=COL[st]; cx.lineWidth=1; cx.stroke(); }
       outline(cell,id,hit); polys.push({id,q:cell});
     }));
@@ -780,6 +870,7 @@ function renderDetail(keepFocus){
    `<div class="top"><span class="code">${esc(sel)}</span><span class="pill s-${st}">${LABEL[st]}</span>
       <div class="nav"><button id="prev" aria-label="Slot below">▼</button><button id="next" aria-label="Slot above">▲</button></div></div>
     <input id="dName" type="text" value="${esc(s.n)}" placeholder="Wine in this slot" aria-label="Wine in this slot"${readOnly?" disabled":""}>
+    ${(()=>{ const wi=typeof info==="function"&&info(sel); return wi&&wi.r?`<p class="note" style="margin:-4px 0 6px;color:var(--text)"><i class="dot" style="background:${CCOL[wi.c]||CCOL[""]}"></i> ${esc(wi.r)}${wi.c&&wi.r.indexOf(wi.c)<0?", "+esc(wi.c):""}${wi.g?" · "+esc(wi.g):""}</p>`:""; })()}
     ${s.w?`<p class="note" style="margin:-4px 0 10px">Bevager: ${esc(s.w)}${s.vt?" · "+esc(s.vt):""}${sibs(sel).length>1?" · stock shared with "+sibs(sel).filter(k=>k!==sel).join(", "):""}</p>`:""}
     <div class="rowctl">
       <div class="ctl"><label for="dCount">On hand</label><div class="step"><button id="minus" aria-label="Pulled one bottle">−</button><input id="dCount" inputmode="numeric" value="${s.c==null?"":s.c}" placeholder="?"><button id="plus" aria-label="Added one bottle">+</button></div></div>
@@ -852,7 +943,7 @@ function renderResults(){
     +(ids.length>8?`<p class="note">${ids.length-8} more. Keep typing to narrow it down.</p>`:"");
 }
 document.getElementById("results").onclick=e=>{ const b=e.target.closest("[data-slot]"); if(!b||!S.slots[b.dataset.slot]) return; sel=b.dataset.slot; document.getElementById("search").blur(); showView("tower"); renderAll(); focusSlot(sel,true); document.getElementById("stage").scrollIntoView({block:"nearest"}); };
-function renderAll(keepFocus){ reindex(); relayout(); if(LIVE&&pulls.box.v) renderPulls(); renderSummary(); renderResults(); renderFaces(); renderDetail(keepFocus); renderSheet(); renderRestock(); renderUsage(); draw(); }
+function renderAll(keepFocus){ reindex(); relayout(); if(typeof renderLegend==="function") renderLegend(); if(LIVE&&pulls.box.v) renderPulls(); renderSummary(); renderResults(); renderFaces(); renderDetail(keepFocus); renderSheet(); renderRestock(); renderUsage(); draw(); }
 function showView(v){ document.querySelectorAll(".tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.v===v)); document.querySelectorAll(".view").forEach(s=>s.classList.toggle("on",s.id==="v-"+v)); if(v==="tower") resize(); }
 document.querySelector(".tabs").onclick=e=>{ const b=e.target.closest("button"); if(b) showView(b.dataset.v); };
 let searchT=null;
@@ -863,6 +954,7 @@ document.getElementById("search").addEventListener("input",e=>{ clearTimeout(sea
 },140); });
 window.addEventListener("resize",resize);
 if(!STANDALONE) document.getElementById("moved").hidden=false;
+{ const lb=document.getElementById("lookbtn"); if(window.WINEINFO){ lb.hidden=false; lb.textContent=BOTTLES?"Plain look":"Bottle look"; lb.onclick=()=>setLook(!BOTTLES); } }
 initStore(); resize(); setMode(mode);
 if(document.fonts&&document.fonts.ready) document.fonts.ready.then(draw);
 </script>
