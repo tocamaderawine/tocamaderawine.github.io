@@ -261,9 +261,46 @@ const SHEET = {
   235:["Livio Felluga Pinot Grigio","Livio Felluga Pinot Grigio"],
   236:["La Fete Rose","Idda"]}},
  "300":{cols:["A","B","C"],rows:{
-  300:["BTG","BTG","BTG"],
-  301:["BTG","BTG","BTG"]}}
+  300:["Jeio", "Jeio", "Jeio"],
+  301:["Jeio", "Jeio", "Jeio"],
+  302:["Freixenet", "Freixenet", "Freixenet"],
+  303:["Freixenet", "Freixenet", "Freixenet"],
+  304:["Moet", "Moet", "Moet"],
+  305:["Moet", "Moet", "Moet"],
+  306:["Berlucchi", "Berlucchi", "Berlucchi"],
+  307:["Berlucchi", "Berlucchi", "Berlucchi"],
+  308:["Gradis'ciutta Pinot Grigio", "Gradis'ciutta Pinot Grigio", "Gradis'ciutta Pinot Grigio"],
+  309:["Gradis'ciutta Pinot Grigio", "Gradis'ciutta Pinot Grigio", "Gradis'ciutta Pinot Grigio"],
+  310:["Pazo das Bruxas Albarino", "Pazo das Bruxas Albarino", "Pazo das Bruxas Albarino"],
+  311:["Pazo das Bruxas Albarino", "Pazo das Bruxas Albarino", "Pazo das Bruxas Albarino"],
+  312:["Villebois Sauvignon Blanc", "Villebois Sauvignon Blanc", "Villebois Sauvignon Blanc"],
+  313:["Villebois Sauvignon Blanc", "Villebois Sauvignon Blanc", "Villebois Sauvignon Blanc"],
+  314:["La Fete du Blanc", "La Fete du Blanc", "La Fete du Blanc"],
+  315:["La Fete du Blanc", "La Fete du Blanc", "La Fete du Blanc"],
+  316:["Etude Chardonnay", "Etude Chardonnay", "Etude Chardonnay"],
+  317:["Etude Chardonnay", "Etude Chardonnay", "Etude Chardonnay"],
+  318:["Rumor Rose", "Rumor Rose", "Rumor Rose"],
+  319:["Rumor Rose", "Rumor Rose", "Rumor Rose"],
+  320:["Four Graces Pinot Noir", "Four Graces Pinot Noir", "Four Graces Pinot Noir"],
+  321:["Four Graces Pinot Noir", "Four Graces Pinot Noir", "Four Graces Pinot Noir"],
+  322:["Cune Reserva", "Cune Reserva", "Cune Reserva"],
+  323:["Cune Reserva", "Cune Reserva", "Cune Reserva"],
+  324:["Argiano Non Confunditur", "Argiano Non Confunditur", "Argiano Non Confunditur"],
+  325:["Argiano Non Confunditur", "Argiano Non Confunditur", "Argiano Non Confunditur"],
+  326:["Terrazas Malbec", "Terrazas Malbec", "Terrazas Malbec"],
+  327:["Terrazas Malbec", "Terrazas Malbec", "Terrazas Malbec"],
+  328:["Daou Reserve Cabernet", "Daou Reserve Cabernet", "Daou Reserve Cabernet"],
+  329:["Daou Reserve Cabernet", "Daou Reserve Cabernet", "Daou Reserve Cabernet"],
+  330:["Secret del Priorat", "Secret del Priorat", "Secret del Priorat"],
+  331:["Secret del Priorat", "Secret del Priorat", "Secret del Priorat"]}}
 };
+/* By-the-glass wall: each wine gets two rows of three. Counts are whole-building stock from Bevager (11/10 audit). */
+const BTG_T=1794700000000, BTG={"Jeio": {"c": 48.85, "w": "Bisol Jeio Prosecco DOC"}, "Freixenet": {"c": 24, "w": "Freixenet Blanc de Blancs Brut"}, "Moet": {"c": 17.83, "w": "Moet & Chandon Imperial"}, "Berlucchi": {"c": 14.01, "w": "Berlucchi '61' Brut"}, "Gradis'ciutta Pinot Grigio": {"c": 15.87, "w": "Gradis Ciutta Pinot Grigio"}, "Pazo das Bruxas Albarino": {"c": 11.8, "w": "Torres Pazo Bruxas Albarino", "vt": "2024"}, "Villebois Sauvignon Blanc": {"c": 16.38, "w": "Villebois Sauvignon Blanc", "vt": "2025"}, "La Fete du Blanc": {"c": 15.01, "w": "La Fete De Blanc"}, "Etude Chardonnay": {"c": 16.32, "w": "Etude 'Grace Benoist Ranch' Chardonnay", "vt": "2022"}, "Rumor Rose": {"c": 29.68, "w": "Rumor Cotes De Provence Rose", "vt": "2025"}, "Four Graces Pinot Noir": {"c": 19.39, "w": "Four Graces Pinot Noir"}, "Cune Reserva": {"c": 2.62, "w": "Cune Reserva", "vt": "2020"}, "Argiano Non Confunditur": {"c": 18.7, "w": "Argiano Non Confunditur"}, "Terrazas Malbec": {"c": 12.82, "w": "Terrazas Malbec Rsv", "vt": "2024"}, "Daou Reserve Cabernet": {"c": 0, "w": "Daou Reserve Cabernet Sauvignon"}, "Secret del Priorat": {"c": 2, "w": "Secret del Priorat", "vt": "2022"}};
+function applyBTG(s){ // one-time layout of the 300s wall; an editor's phone saves it for everyone
+  if((s.layT||0)>=BTG_T) return false; const sec=s.sections.find(x=>x.id==="300"); if(!sec) return false;
+  for(const r of Object.keys(SHEET["300"].rows).map(Number)){ if(!sec.rows.includes(r)) sec.rows.push(r);
+    sec.cols.forEach((c,i)=>{ const n=SHEET["300"].rows[r][i], b=BTG[n]||{}, o={n,c:b.c==null?null:b.c,p:1}; if(b.w) o.w=b.w; if(b.vt) o.vt=b.vt; s.slots[r+c]=o; }); }
+  sec.rows.sort((a,b)=>a-b); s.layT=BTG_T; return true; }
 const FACE_OF = {"100":0,"200":1,"300":2};   // 0 front, 1 left, 2 back
 const FACE_YAW = [0,-Math.PI/2,Math.PI,Math.PI/2];
 
@@ -275,6 +312,7 @@ function defaultState(){
     s.sections.push({id:sid,cols:sec.cols.slice(),rows});
     for(const r of rows) sec.cols.forEach((c,i)=>{ s.slots[r+c]={n:sec.rows[r][i]||"",c:null,p:1}; });
   }
+  applyBTG(s);
   return s;
 }
 let S=defaultState();
@@ -420,7 +458,7 @@ function fbDelta(box,msg,patch){
 }
 function fbList(x){ return Array.isArray(x)?x.filter(v=>v!=null):(x&&typeof x==="object"?Object.values(x):[]); }
 function fbNormalize(r){
-  const s={v:1,rev:r.rev||0,sections:[],slots:{},log:[]}; if(r.syncT) s.syncT=r.syncT; if(r.sync) s.sync=r.sync;
+  const s={v:1,rev:r.rev||0,sections:[],slots:{},log:[]}; if(r.syncT) s.syncT=r.syncT; if(r.sync) s.sync=r.sync; if(r.layT) s.layT=r.layT;
   for(const sec of fbList(r.sections)){ if(!sec||sec.id==null) continue; s.sections.push({id:String(sec.id),cols:fbList(sec.cols).map(String),rows:fbList(sec.rows).map(Number)}); }
   if(!s.sections.length) s.sections=defaultState().sections;
   const src=r.slots||{};
@@ -428,7 +466,7 @@ function fbNormalize(r){
   return s;
 }
 function fbSlotOut(s){ if(!s) return null; const o={n:s.n||"",p:s.p==null?1:s.p}; if(s.c!=null) o.c=s.c; if(s.w) o.w=s.w; if(s.vt) o.vt=s.vt; return o; }
-function fbStateOut(){ const o={v:1,rev:S.rev||Date.now(),sections:S.sections,slots:{}}; for(const id in S.slots) o.slots[id]=fbSlotOut(S.slots[id]); if(S.syncT) o.syncT=S.syncT; if(S.sync) o.sync=S.sync; return o; }
+function fbStateOut(){ const o={v:1,rev:S.rev||Date.now(),sections:S.sections,slots:{}}; for(const id in S.slots) o.slots[id]=fbSlotOut(S.slots[id]); if(S.syncT) o.syncT=S.syncT; if(S.sync) o.sync=S.sync; if(S.layT) o.layT=S.layT; return o; }
 function fbLogBuild(){ const m=Object.assign({},fb.logs.v&&typeof fb.logs.v==="object"?fb.logs.v:{},fb.pend); S.log=Object.values(m).filter(e=>e&&e.t).sort((a,b)=>a.t-b.t); }
 function fbAdopt(){ // rebuild what's on screen from the shared copy, keeping any edit of ours that hasn't been sent yet
   if(!fb.got) return;
@@ -442,6 +480,7 @@ function fbAdopt(){ // rebuild what's on screen from the shared copy, keeping an
   const n=fbNormalize(r);
   for(const id of fb.dirty.keys()) if(S.slots[id]&&n.slots[id]) n.slots[id]=S.slots[id];
   S=n; fbLogBuild();
+  if(applyBTG(S)&&fbCan()){ S.rev=Date.now(); fbMark(null); }
   if(window.COUNTS&&window.COUNTS.t>(S.syncT||0)&&applySync(window.COUNTS,true)&&fbCan()){ S.rev=Date.now(); fbMark(null); }
   if(!S.slots[sel]) sel=slotList()[0].id;
   renderAll(true);
