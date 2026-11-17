@@ -151,6 +151,19 @@ button:disabled,input:disabled{opacity:.45;cursor:default}
 .cntin input.set{border-color:var(--ok)}
 .wallh{font-family:var(--display);font-size:17px;text-transform:uppercase;letter-spacing:.05em;color:var(--brass);padding-top:12px}
 .noback{color:var(--out);font-size:13px}
+.tabs .badge{display:inline-block;min-width:18px;padding:0 4px;margin-left:3px;border-radius:99px;background:var(--led);color:#fff;font-size:12px;line-height:18px;vertical-align:1px;letter-spacing:0}
+.tabs.five button{flex:1 1 auto;font-size:15px;letter-spacing:.02em;white-space:nowrap;min-width:0;padding-left:0;padding-right:0}
+.rv{display:flex;gap:10px;align-items:center;padding:9px 0 9px 10px;border-top:1px solid var(--line);border-left:3px solid transparent}
+.rv.flag{border-left-color:var(--out);background:rgba(255,90,79,.06)}
+.rv .ri{flex:1;min-width:0;background:none;border:0;padding:0;text-align:left;display:flex;flex-direction:column;gap:1px}
+.rv .ri b{font-size:16px;overflow-wrap:anywhere}
+.rv .ri .rcode{font-family:var(--display);font-weight:700;font-size:18px;color:var(--brass)}
+.rv .ri small{color:var(--muted);font-size:13px}
+.rv .ri .why{color:var(--out);font-size:13px;font-weight:600}
+.rv .ok,.rv .no{flex:none;min-height:44px;min-width:46px;border-radius:9px;background:none;font-family:var(--display);font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:0 10px}
+.rv .ok{border:1px solid var(--ok);color:var(--ok)}
+.rv .no{border:1px solid var(--out);color:var(--out)}
+.rvh{font-family:var(--display);font-size:18px;text-transform:uppercase;letter-spacing:.04em;margin:16px 0 4px;color:var(--muted)}
 .guide{display:flex;gap:10px;align-items:flex-end;margin:2px 0 12px}
 .guide .ava{width:86px;height:auto;flex:none}
 .guide .say{position:relative;flex:1;background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:10px 12px;font-size:14.5px;line-height:1.4;color:var(--text);margin-bottom:14px}
@@ -216,6 +229,7 @@ h2{font-family:var(--display);font-size:20px;text-transform:uppercase;letter-spa
   <button role="tab" data-v="sheet" aria-selected="false">Sheet</button>
   <button role="tab" data-v="restock" aria-selected="false">Restock</button>
   <button role="tab" data-v="usage" aria-selected="false">Usage</button>
+  <button role="tab" data-v="review" aria-selected="false" id="revtab" hidden>Review</button>
 </div>
 
 <section class="view on" id="v-tower">
@@ -235,12 +249,13 @@ h2{font-family:var(--display);font-size:20px;text-transform:uppercase;letter-spa
   </div>
   <p class="hint" id="hint">You are looking through the glass, so columns run C, B, A left to right, the mirror of inside. Pinch to zoom in until the names show.</p>
   <div id="detail"></div>
-  <div id="toast" role="status" hidden></div>
 </section>
 
 <section class="view" id="v-sheet"></section>
 <section class="view" id="v-restock"></section>
 <section class="view" id="v-usage"></section>
+<section class="view" id="v-review"></section>
+<div id="toast" role="status" hidden></div>
 
 <script src="wines.js"></script>
 <script src="counts.js"></script>
@@ -405,7 +420,8 @@ function status(id){ const s=slot(id); if(!s.n) return "empty"; const c=onHand(i
 /* Taps: anyone on the live site can log "took one" for a slot or set how many bottles are in it.
    Building count = last Bevager/editor count minus taps since then. Slot count = last count set on the slot minus taps since then. */
 let TAPS={};
-function indexTaps(){ TAPS={}; for(const e of S.log) if(e&&e.src==="tap"&&e.id) (TAPS[e.id]=TAPS[e.id]||[]).push(e.t); }
+let TAPE={};
+function indexTaps(){ TAPS={}; TAPE={}; for(const e of S.log) if(e&&e.src==="tap"&&e.id){ (TAPS[e.id]=TAPS[e.id]||[]).push(e.t); (TAPE[e.id]=TAPE[e.id]||[]).push(e); } }
 function tapsSince(id,t){ const a=TAPS[id]; if(!a) return 0; let n=0; for(const x of a) if(x>t) n++; return n; }
 function countT(id){ const s=slot(id); return s.ct||S.syncT||0; }
 function onHand(id){ const s=slot(id); if(s.c==null) return null; if(!LIVE) return s.c; const t=countT(id), used=sibs(id).reduce((a,k)=>a+tapsSince(k,t),0); return Math.max(0,Math.round((s.c-used)*100)/100); }
@@ -550,7 +566,7 @@ function fbNormalize(r){
 }
 function fbSlotOut(s){ if(!s) return null; const o={n:s.n||"",p:s.p==null?1:s.p}; if(s.c!=null) o.c=s.c; if(s.ct) o.ct=s.ct; if(s.w) o.w=s.w; if(s.vt) o.vt=s.vt; return o; }
 function fbStateOut(){ const o={v:1,rev:S.rev||Date.now(),sections:S.sections,slots:{}}; for(const id in S.slots) o.slots[id]=fbSlotOut(S.slots[id]); if(S.syncT) o.syncT=S.syncT; if(S.sync) o.sync=S.sync; if(S.layT) o.layT=S.layT; return o; }
-function fbLogBuild(){ const m=Object.assign({},fb.logs.v&&typeof fb.logs.v==="object"?fb.logs.v:{},fb.pend); S.log=Object.values(m).filter(e=>e&&e.t).sort((a,b)=>a.t-b.t); }
+function fbLogBuild(){ const m=Object.assign({},fb.logs.v&&typeof fb.logs.v==="object"?fb.logs.v:{},fb.pend); S.log=Object.entries(m).filter(([k,e])=>e&&e.t).map(([k,e])=>Object.assign({},e,{_k:k})).sort((a,b)=>a.t-b.t); }
 function fbAdopt(){ // rebuild what's on screen from the shared copy, keeping any edit of ours that hasn't been sent yet
   if(!fb.got) return;
   const r=fb.state.v;
@@ -643,6 +659,63 @@ document.getElementById("pulls").addEventListener("click",e=>{
   if(go&&S.slots[go.dataset.goto]){ sel=go.dataset.goto; showView("tower"); renderAll(); focusSlot(sel,true); document.getElementById("stage").scrollIntoView({block:"nearest"}); }
 });
 setInterval(()=>{ if(!document.getElementById("pulls").hidden) renderPulls(); },30000);
+/* ---------- manager review of taps: taps count right away; managers approve or reject; after 24 hours they approve themselves ---------- */
+const REV={box:{v:null},opt:{},loaded:false,pruned:false};
+const DAY=864e5;
+function approvedAt(k){ if(k in REV.opt) return REV.opt[k]; const v=REV.box.v; return v&&v[k]||null; }
+function phoneTag(d){ return d?"Phone "+String(d).slice(0,4).toUpperCase():"Unknown phone"; }
+function tapFlags(e){
+  const why=[], same=TAPE[e.id]||[];
+  if(same.some(x=>x!==e&&x.dv&&x.dv===e.dv&&(x.t<e.t||(x.t===e.t&&String(x._k)<String(e._k)))&&e.t-x.t<60000)) why.push("Second tap on this slot within a minute, same phone");
+  const r=shelfRec(e.id);
+  if(r&&r.h!=null&&(r.t||0)<e.t){ const before=r.h-same.filter(x=>x!==e&&x.t>(r.t||0)&&x.t<e.t).length; if(before<=0) why.push("Slot already showed empty"); }
+  const s=slot(e.id);
+  if(s.c!=null){ const ct=countT(e.id); if(ct<e.t){ const used=sibs(e.id).reduce((a,k)=>a+(TAPE[k]||[]).filter(x=>x!==e&&x.t>ct&&x.t<e.t).length,0); if(s.c-used<=0) why.push("Building count was already 0"); } }
+  return why;
+}
+function reviewList(){
+  if(!LIVE||!fbCan()) return [];
+  const now=Date.now(), out=[];
+  for(const e of S.log){ if(!e||e.src!=="tap"||!e._k||e.t<now-DAY||approvedAt(e._k)) continue; out.push(Object.assign({},e,{why:tapFlags(e)})); }
+  return out.sort((a,b)=>(b.why.length?1:0)-(a.why.length?1:0)||b.t-a.t);
+}
+function whenTxt(t){ const d=new Date(t), today=new Date().toDateString()===d.toDateString(); return (today?"Today ":d.toLocaleDateString(undefined,{weekday:"short"})+" ")+d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}); }
+function renderReview(){
+  const can=LIVE&&fbCan(), tab=document.getElementById("revtab"), el=document.getElementById("v-review");
+  tab.hidden=!can; document.querySelector(".tabs").classList.toggle("five",can); if(!can){ el.innerHTML=""; if(tab.getAttribute("aria-selected")==="true") showView("tower"); return; }
+  const list=reviewList(), flagged=list.filter(x=>x.why.length).length;
+  tab.innerHTML="Review"+(list.length?`<span class="badge">${list.length}</span>`:"");
+  let h=`<div class="toolbar">${list.length?`<button class="btn" id="apall" style="border-color:var(--ok);color:var(--ok)">Approve all ${list.length}</button>`:""}<span class="note" style="margin:0">Taps count as soon as they happen. Reject one to take it back out. Anything left here for 24 hours approves itself.</span></div>`;
+  if(!list.length) h+=`<p class="empty">Nothing to review. Every tap from the last 24 hours is approved.</p>`;
+  else{ if(flagged) h+=`<p class="note" style="color:var(--out);margin:0 0 6px">${flagged} worth a look. They're at the top.</p>`;
+    h+=list.map(e=>`<div class="rv${e.why.length?" flag":""}"><button class="ri" data-slot="${esc(e.id)}"><span><span class="rcode">${esc(e.id)}</span> <b>${esc(e.n||slot(e.id).n||"")}</b></span>${e.why.map(w=>`<span class="why">${esc(w)}</span>`).join("")}<small>Took one · ${esc(whenTxt(e.t))} · ${esc(phoneTag(e.dv))}${fb.pend[e._k]?" · saving":""}</small></button>
+      <button class="ok" data-ok="${esc(e._k)}" aria-label="Approve">OK</button><button class="no" data-no="${esc(e._k)}" aria-label="Reject">Reject</button></div>`).join(""); }
+  const now=Date.now(), rc=Object.entries(shelf.box.v||{}).filter(([id,r])=>r&&r.t>now-DAY&&slot(id).n).sort((a,b)=>b[1].t-a[1].t);
+  if(rc.length) h+=`<div class="rvh">Counts set in the last 24 hours</div>`+rc.map(([id,r])=>`<div class="rv"><button class="ri" data-slot="${esc(id)}"><span><span class="rcode">${esc(id)}</span> <b>${esc(slot(id).n)}</b></span><small>Set to ${r.h==null?"?":r.h}${r.f?" (full is "+r.f+")":""} · ${esc(whenTxt(r.t))} · ${esc(phoneTag(r.d))}</small></button></div>`).join("");
+  el.innerHTML=h;
+  if(REV.loaded&&!REV.pruned){ REV.pruned=true; const old={}; for(const [k,v] of Object.entries(REV.box.v||{})) if(v<now-3*DAY) old[k]=null; if(Object.keys(old).length) fbReq("PATCH","tower/ok",old,true).catch(()=>{}); }
+}
+async function approve(keys){
+  if(!keys.length) return; const body={}; keys.forEach(k=>{ REV.opt[k]=Date.now(); body[k]={".sv":"timestamp"}; }); renderAll(true);
+  try{ await fbReq("PATCH","tower/ok",body,true); }
+  catch(e){ keys.forEach(k=>delete REV.opt[k]); renderAll(true); showToast("Not saved. Check the connection and try again.",null,true); return; }
+  setTimeout(()=>{ keys.forEach(k=>delete REV.opt[k]); soon(); },5000);
+  if(keys.length>1) showToast("Approved "+keys.length+" taps.",()=>{ const b={}; keys.forEach(k=>{ b[k]=null; REV.opt[k]=null; }); renderAll(true); fbReq("PATCH","tower/ok",b,true).catch(()=>{}).then(()=>setTimeout(()=>{ keys.forEach(k=>delete REV.opt[k]); soon(); },3000)); });
+}
+async function reject(k){
+  const e=S.log.find(x=>x._k===k); if(!e) return; const ev=Object.assign({},e); delete ev._k;
+  tap.gone.add(k); delete fb.pend[k]; if(fb.logs.v) delete fb.logs.v[k]; fbLogBuild(); renderAll(true);
+  try{ await fbReq("DELETE","tower/log/"+k,undefined,true); }
+  catch(x){ tap.gone.delete(k); if(fb.logs.v) fb.logs.v[k]=ev; fbLogBuild(); renderAll(true); showToast("Not saved. Check the connection and try again.",null,true); return; }
+  showToast("Rejected "+e.id+" "+(e.n||"")+". It's back in the counts.",async()=>{ tap.gone.delete(k); if(fb.logs.v) fb.logs.v[k]=ev; fbLogBuild(); renderAll(true); try{ await fbReq("PUT","tower/log/"+k,ev,true); }catch(x){ showToast("Not saved. Check the connection and try again.",null,true); } });
+}
+document.getElementById("v-review").addEventListener("click",e=>{
+  const ok=e.target.closest("[data-ok]"), no=e.target.closest("[data-no]"), all=e.target.closest("#apall"), go=e.target.closest("[data-slot]");
+  if(ok){ approve([ok.dataset.ok]); return; }
+  if(no){ reject(no.dataset.no); return; }
+  if(all){ approve(reviewList().map(x=>x._k)); return; }
+  if(go&&S.slots[go.dataset.slot]){ sel=go.dataset.slot; showView("tower"); renderAll(); focusSlot(sel,true); document.getElementById("stage").scrollIntoView({block:"nearest"}); }
+});
 /* ---------- taps from the floor: no login needed ---------- */
 const DEV=(()=>{ try{ let d=localStorage.getItem(LS+"-dev"); if(!d){ d=Math.random().toString(36).slice(2,10); localStorage.setItem(LS+"-dev",d); } return d; }catch(e){ return "anon"; } })();
 const tap={gone:new Set(),toastT:null,undo:null};
@@ -688,6 +761,7 @@ function fbInit(){
   fbStream("pulls","orderBy=%22t%22&limitToLast=200",pulls.box,()=>{ if(fb.got) renderPulls(); });
   fbStream("tower/log","orderBy=%22%24key%22&limitToLast=2000",fb.logs,()=>{ for(const k in fb.pend) if(fb.logs.v&&fb.logs.v[k]) delete fb.pend[k]; for(const k of tap.gone) if(fb.logs.v) delete fb.logs.v[k]; fbLogBuild(); if(fb.got) soon(); });
   fbStream("shelf","",shelf.box,()=>{ if(fb.got) soon(); });
+  fbStream("tower/ok","",REV.box,()=>{ REV.loaded=true; if(fb.got) soon(); });
   try{ const s=JSON.parse(localStorage.getItem(LS+"-fb")||"null"); if(s&&s.rt&&s.uid){ fb.user=s; fb.role="pending"; fbRole(); } }catch(e){}
   renderAcct();
 }
@@ -1208,7 +1282,7 @@ function renderResults(){
     +(ids.length>8?`<p class="note">${ids.length-8} more. Keep typing to narrow it down.</p>`:"");
 }
 document.getElementById("results").onclick=e=>{ const b=e.target.closest("[data-slot]"); if(!b||!S.slots[b.dataset.slot]) return; sel=b.dataset.slot; document.getElementById("search").blur(); showView("tower"); renderAll(); focusSlot(sel,true); document.getElementById("stage").scrollIntoView({block:"nearest"}); };
-function renderAll(keepFocus){ reindex(); relayout(); if(typeof renderLegend==="function") renderLegend(); if(LIVE&&pulls.box.v) renderPulls(); renderSummary(); renderResults(); renderFaces(); renderDetail(keepFocus); renderSheet(); renderRestock(); renderUsage(); draw(); }
+function renderAll(keepFocus){ reindex(); relayout(); if(typeof renderLegend==="function") renderLegend(); if(LIVE&&pulls.box.v) renderPulls(); renderSummary(); renderResults(); renderFaces(); renderDetail(keepFocus); renderSheet(); renderRestock(); renderUsage(); renderReview(); draw(); }
 function showView(v){ document.querySelectorAll(".tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.v===v)); document.querySelectorAll(".view").forEach(s=>s.classList.toggle("on",s.id==="v-"+v)); if(v==="tower") resize(); }
 document.querySelector(".tabs").onclick=e=>{ const b=e.target.closest("button"); if(b) showView(b.dataset.v); };
 let searchT=null;
