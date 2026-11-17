@@ -25,7 +25,35 @@
     },
     "tower": {
       ".read": true,
-      ".write": "auth != null && (root.child('owner').val() === auth.uid || root.child('editors').child(auth.uid).exists())"
+      ".write": "auth != null && (root.child('owner').val() === auth.uid || root.child('editors').child(auth.uid).exists())",
+      "log": {
+        "$k": {
+          ".write": "(!data.exists() && newData.child('src').val() === 'tap' && newData.child('d').val() === -1 && newData.child('t').val() === now && root.child('tower/state/slots').child(newData.child('id').val()).exists()) || (!newData.exists() && data.child('src').val() === 'tap' && data.child('t').val() > now - 600000)",
+          ".validate": "newData.hasChildren(['t', 'id', 'd']) && newData.child('t').isNumber() && newData.child('d').isNumber() && newData.child('id').isString() && newData.child('id').val().length <= 8 && (!newData.child('n').exists() || (newData.child('n').isString() && newData.child('n').val().length <= 120)) && (!newData.child('dv').exists() || (newData.child('dv').isString() && newData.child('dv').val().length <= 16))"
+        }
+      }
+    },
+    "shelf": {
+      ".read": true,
+      "$id": {
+        ".write": "root.child('tower/state/slots').child($id).exists()",
+        ".validate": "newData.hasChildren(['t'])",
+        "h": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 99 && newData.val() % 1 === 0"
+        },
+        "f": {
+          ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 99 && newData.val() % 1 === 0"
+        },
+        "t": {
+          ".validate": "newData.isNumber() && newData.val() <= now"
+        },
+        "d": {
+          ".validate": "newData.isString() && newData.val().length <= 16"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
     },
     "pulls": {
       ".read": true,

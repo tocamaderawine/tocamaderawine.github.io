@@ -116,6 +116,41 @@ button:disabled,input:disabled{opacity:.45;cursor:default}
 .step button{background:var(--panel-2);border:0;width:46px;font-size:22px;font-weight:600}
 .step input{flex:1;min-width:0;width:100%;text-align:center;background:none;border:0;font-family:var(--display);font-size:26px;font-weight:600;font-variant-numeric:tabular-nums;padding:6px 0}
 .note{font-size:13px;color:var(--muted);margin:8px 0 0}
+.shelf{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;margin:0 0 10px}
+.sh-top{display:flex;gap:10px;align-items:center}
+.sh-n{flex:1;min-width:0;display:flex;align-items:baseline;gap:7px;flex-wrap:wrap}
+.sh-n b{font-family:var(--display);font-size:44px;font-weight:700;line-height:.95;font-variant-numeric:tabular-nums}
+.sh-n span{font-size:14px;color:var(--muted)}
+.sh-n.zero b{color:var(--out)} .sh-n.part b{color:var(--low)}
+.took{flex:none;min-height:64px;min-width:150px;border:0;border-radius:12px;background:var(--brass);color:#141112;font-family:var(--display);font-size:25px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;touch-action:manipulation}
+.took:active{transform:scale(.97)}
+.rst{width:100%;margin-top:8px;min-height:46px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);font-family:var(--display);font-size:18px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.pick{margin-top:10px;border-top:1px solid var(--line);padding-top:10px}
+.pick p{margin:0 0 8px;font-weight:600}
+.pgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.pgrid button{min-height:46px;border-radius:9px;border:1px solid var(--line);background:var(--panel-2);font-family:var(--display);font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;touch-action:manipulation}
+.pgrid button.cur{border-color:var(--brass);color:var(--brass)}
+.pfoot{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px;font-size:14px;color:var(--muted)}
+.fstep{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--bg)}
+.fstep button{background:var(--panel-2);border:0;width:42px;min-height:40px;font-size:20px;font-weight:600}
+.fstep span{min-width:38px;text-align:center;font-family:var(--display);font-size:22px;font-weight:600;color:var(--text);align-self:center}
+.pfoot input{width:70px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px;font-size:16px;text-align:center}
+.pfoot #pclose{margin-left:auto}
+.pfoot button,.fstep button{color:var(--text)}
+.bld{font-size:13.5px;color:var(--muted);margin:8px 0 0}
+.bld b{color:var(--text);font-weight:600}
+#toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:20;width:min(560px,calc(100% - 24px));display:flex;gap:10px;align-items:center;background:#2f2829;border:1px solid var(--brass);border-radius:12px;padding:10px 12px;box-shadow:0 8px 28px rgba(0,0,0,.55);font-size:15px}
+#toast[hidden]{display:none}
+#toast span{flex:1;min-width:0}
+#toast button{flex:none;min-height:42px;padding:0 16px;border-radius:9px;border:1px solid var(--brass);background:none;color:var(--brass);font-family:var(--display);font-size:18px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+#toast.err{border-color:var(--out)}
+.chip.link{cursor:pointer;border-color:var(--brass)}
+.cntin{display:flex;flex-direction:column;gap:3px}
+.cntin span{font-size:13px;line-height:1.2;overflow-wrap:anywhere}
+.cntin input{width:100%;max-width:90px;background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:7px 6px;font-family:var(--display);font-size:20px;font-weight:600;text-align:center}
+.cntin input.set{border-color:var(--ok)}
+.wallh{font-family:var(--display);font-size:17px;text-transform:uppercase;letter-spacing:.05em;color:var(--brass);padding-top:12px}
+.noback{color:var(--out);font-size:13px}
 .guide{display:flex;gap:10px;align-items:flex-end;margin:2px 0 12px}
 .guide .ava{width:86px;height:auto;flex:none}
 .guide .say{position:relative;flex:1;background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:10px 12px;font-size:14.5px;line-height:1.4;color:var(--text);margin-bottom:14px}
@@ -200,6 +235,7 @@ h2{font-family:var(--display);font-size:20px;text-transform:uppercase;letter-spa
   </div>
   <p class="hint" id="hint">You are looking through the glass, so columns run C, B, A left to right, the mirror of inside. Pinch to zoom in until the names show.</p>
   <div id="detail"></div>
+  <div id="toast" role="status" hidden></div>
 </section>
 
 <section class="view" id="v-sheet"></section>
@@ -358,18 +394,30 @@ function slotList(){ const out=[]; for(const sec of S.sections) for(const r of s
 function slot(id){ return S.slots[id]||{n:"",c:null,p:1}; }
 let WIDX={}, HAY={}, HIT=null;
 function nrm(t){ return String(t||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase(); }
-function reindex(){ WIDX={}; HAY={};
+function reindex(){ WIDX={}; HAY={}; indexTaps();
   for(const s of slotList()){ const d=S.slots[s.id]; if(!d) continue; if(d.w)(WIDX[d.w]=WIDX[d.w]||[]).push(s.id); const wi=window.WINEINFO&&window.WINEINFO[s.id]&&nrm(window.WINEINFO[s.id].n).replace(/[^a-z0-9]/g,"")===nrm(d.n).replace(/[^a-z0-9]/g,"")?window.WINEINFO[s.id]:null;
     HAY[s.id]=nrm(s.id+" "+d.n+" "+(d.w||"")+" "+(d.vt||"")+(wi?" "+wi.r+" "+wi.c+" "+wi.g:"")); }
   const toks=nrm(query).split(/\s+/).filter(Boolean);
   HIT=toks.length?new Set(Object.keys(HAY).filter(id=>toks.every(t=>HAY[id].includes(t)))):null; }
 function sibs(id){ const w=slot(id).w; return (w&&WIDX[w])||[id]; }
 function prune(){ const ids=new Set(slotList().map(s=>s.id)); for(const k of Object.keys(S.slots)) if(!ids.has(k)) delete S.slots[k]; }
-function status(id){ const s=slot(id); if(!s.n) return "empty"; if(s.c==null) return "unk"; if(s.c<=0) return "out"; const need=sibs(id).reduce((a,k)=>a+slot(k).p,0); if(s.c<need) return "low"; return "ok"; }
+function status(id){ const s=slot(id); if(!s.n) return "empty"; const c=onHand(id); if(c==null) return "unk"; if(c<=0) return "out"; const need=sibs(id).reduce((a,k)=>a+slot(k).p,0); if(c<need) return "low"; return "ok"; }
+/* Taps: anyone on the live site can log "took one" for a slot or set how many bottles are in it.
+   Building count = last Bevager/editor count minus taps since then. Slot count = last count set on the slot minus taps since then. */
+let TAPS={};
+function indexTaps(){ TAPS={}; for(const e of S.log) if(e&&e.src==="tap"&&e.id) (TAPS[e.id]=TAPS[e.id]||[]).push(e.t); }
+function tapsSince(id,t){ const a=TAPS[id]; if(!a) return 0; let n=0; for(const x of a) if(x>t) n++; return n; }
+function countT(id){ const s=slot(id); return s.ct||S.syncT||0; }
+function onHand(id){ const s=slot(id); if(s.c==null) return null; if(!LIVE) return s.c; const t=countT(id), used=sibs(id).reduce((a,k)=>a+tapsSince(k,t),0); return Math.max(0,Math.round((s.c-used)*100)/100); }
+function takenSince(id){ const t=countT(id); return sibs(id).reduce((a,k)=>a+tapsSince(k,t),0); }
+const shelf={box:{v:null},opt:{}};
+function shelfRec(id){ if(id in shelf.opt) return shelf.opt[id]; const v=shelf.box.v; return v&&v[id]&&typeof v[id]==="object"?v[id]:null; }
+function here(id){ if(!LIVE) return null; const r=shelfRec(id); if(!r||r.h==null) return null; return Math.max(0,r.h-tapsSince(id,r.t||0)); }
+function fillOf(id){ const r=shelfRec(id); return r&&r.f?r.f:null; }
 function applySync(y,countsOnly){
   if(!y||!y.items||!(y.t>(S.syncT||0))) return false;
   for(const id in y.items){ const s=S.slots[id], it=y.items[id]; if(!s||!it) continue;
-    if(it.n!=null&&!countsOnly) s.n=it.n; if("c" in it) s.c=(it.c==null?null:it.c);
+    if(it.n!=null&&!countsOnly) s.n=it.n; if("c" in it){ s.c=(it.c==null?null:it.c); s.ct=y.t; }
     if("p" in it&&!countsOnly) s.p=it.p;
     if("w" in it){ if(it.w) s.w=it.w; else delete s.w; } if("vt" in it){ if(it.vt) s.vt=it.vt; else delete s.vt; } }
   if(y.clearLogBefore) S.log=S.log.filter(e=>e.t>=y.clearLogBefore);
@@ -497,10 +545,10 @@ function fbNormalize(r){
   for(const sec of fbList(r.sections)){ if(!sec||sec.id==null) continue; s.sections.push({id:String(sec.id),cols:fbList(sec.cols).map(String),rows:fbList(sec.rows).map(Number)}); }
   if(!s.sections.length) s.sections=defaultState().sections;
   const src=r.slots||{};
-  for(const sec of s.sections) for(const row of sec.rows) for(const c of sec.cols){ const id=row+c, d=src[id]||{}, o={n:d.n==null?"":String(d.n),c:d.c==null?null:+d.c,p:d.p==null?1:+d.p}; if(d.w) o.w=d.w; if(d.vt) o.vt=d.vt; s.slots[id]=o; }
+  for(const sec of s.sections) for(const row of sec.rows) for(const c of sec.cols){ const id=row+c, d=src[id]||{}, o={n:d.n==null?"":String(d.n),c:d.c==null?null:+d.c,p:d.p==null?1:+d.p}; if(d.w) o.w=d.w; if(d.vt) o.vt=d.vt; if(d.ct) o.ct=+d.ct; s.slots[id]=o; }
   return s;
 }
-function fbSlotOut(s){ if(!s) return null; const o={n:s.n||"",p:s.p==null?1:s.p}; if(s.c!=null) o.c=s.c; if(s.w) o.w=s.w; if(s.vt) o.vt=s.vt; return o; }
+function fbSlotOut(s){ if(!s) return null; const o={n:s.n||"",p:s.p==null?1:s.p}; if(s.c!=null) o.c=s.c; if(s.ct) o.ct=s.ct; if(s.w) o.w=s.w; if(s.vt) o.vt=s.vt; return o; }
 function fbStateOut(){ const o={v:1,rev:S.rev||Date.now(),sections:S.sections,slots:{}}; for(const id in S.slots) o.slots[id]=fbSlotOut(S.slots[id]); if(S.syncT) o.syncT=S.syncT; if(S.sync) o.sync=S.sync; if(S.layT) o.layT=S.layT; return o; }
 function fbLogBuild(){ const m=Object.assign({},fb.logs.v&&typeof fb.logs.v==="object"?fb.logs.v:{},fb.pend); S.log=Object.values(m).filter(e=>e&&e.t).sort((a,b)=>a.t-b.t); }
 function fbAdopt(){ // rebuild what's on screen from the shared copy, keeping any edit of ours that hasn't been sent yet
@@ -595,11 +643,51 @@ document.getElementById("pulls").addEventListener("click",e=>{
   if(go&&S.slots[go.dataset.goto]){ sel=go.dataset.goto; showView("tower"); renderAll(); focusSlot(sel,true); document.getElementById("stage").scrollIntoView({block:"nearest"}); }
 });
 setInterval(()=>{ if(!document.getElementById("pulls").hidden) renderPulls(); },30000);
+/* ---------- taps from the floor: no login needed ---------- */
+const DEV=(()=>{ try{ let d=localStorage.getItem(LS+"-dev"); if(!d){ d=Math.random().toString(36).slice(2,10); localStorage.setItem(LS+"-dev",d); } return d; }catch(e){ return "anon"; } })();
+const tap={gone:new Set(),toastT:null,undo:null};
+let renderT=null; function soon(){ clearTimeout(renderT); renderT=setTimeout(()=>renderAll(true),60); }
+async function fbPublic(method,path,body){ const r=await fetch(fbUrl(path),{method,headers:body===undefined?{}:{"Content-Type":"application/json"},body:body===undefined?undefined:JSON.stringify(body)}); if(!r.ok) throw {status:r.status}; return r.json(); }
+function showToast(msg,undo,err){ const el=document.getElementById("toast"); tap.undo=undo||null; clearTimeout(tap.toastT);
+  el.className=err?"err":""; el.innerHTML=`<span>${esc(msg)}</span>${undo?`<button id="undo">Undo</button>`:""}`; el.hidden=false;
+  tap.toastT=setTimeout(()=>{ el.hidden=true; tap.undo=null; },undo?9000:6000); }
+document.getElementById("toast").addEventListener("click",e=>{ if(e.target.closest("#undo")&&tap.undo){ const u=tap.undo; tap.undo=null; document.getElementById("toast").hidden=true; u(); } });
+function tapFail(e){ showToast(e&&(e.status===401||e.status===403)?"Not saved. The database isn't taking taps yet. Tell Ben.":"Not saved. Check the connection and tap again.",null,true); }
+async function tookOne(id){
+  const s=slot(id); if(!s.n) return;
+  const t=Date.now(), k=t+"-"+Math.random().toString(36).slice(2,8), ev={t,id,n:s.n,d:-1,src:"tap",dv:DEV};
+  fb.pend[k]=ev; fbLogBuild(); renderAll(true);
+  try{ navigator.vibrate&&navigator.vibrate(12); }catch(x){}
+  const h=here(id); showToast("Took one from "+id+"."+(h!=null?" "+h+" left in the slot.":""),()=>undoTap(k));
+  try{ await fbPublic("PUT","tower/log/"+k,Object.assign({},ev,{t:{".sv":"timestamp"}})); }
+  catch(e){ delete fb.pend[k]; fbLogBuild(); renderAll(true); tapFail(e); }
+}
+async function undoTap(k){
+  delete fb.pend[k]; tap.gone.add(k); if(fb.logs.v) delete fb.logs.v[k]; fbLogBuild(); renderAll(true);
+  try{ await fbPublic("DELETE","tower/log/"+k); }catch(e){ tap.gone.delete(k); tapFail(e); }
+}
+async function putShelf(id,rec,quiet,prev){
+  shelf.opt[id]=rec||null; renderAll(true);
+  try{ if(rec) await fbPublic("PUT","shelf/"+id,Object.assign({},rec,rec.now?{t:{".sv":"timestamp"},now:undefined}:{})); else await fbPublic("DELETE","shelf/"+id); }
+  catch(e){ delete shelf.opt[id]; renderAll(true); tapFail(e); return false; }
+  setTimeout(()=>{ if(shelf.opt[id]===(rec||null)){ delete shelf.opt[id]; soon(); } },5000);
+  return true;
+}
+function setHere(id,n,quiet){
+  n=Math.max(0,Math.min(99,Math.round(+n))); if(isNaN(n)||!slot(id).n) return;
+  const prev=shelfRec(id), f=Math.max(prev&&prev.f||0,n), rec={h:n,t:Date.now(),d:DEV,now:true}; if(f) rec.f=f;
+  putShelf(id,rec).then(ok=>{ if(ok&&!quiet) showToast(id+" now has "+n+(n===1?" bottle.":" bottles."),()=>putShelf(id,prev?Object.assign({},prev,{now:undefined}):null)); });
+}
+function setFill(id,f){
+  f=Math.max(1,Math.min(99,Math.round(+f))); const prev=shelfRec(id), rec=Object.assign({},prev||{},{f,d:DEV,now:undefined}); if(!prev||!prev.t){ rec.t=Date.now(); rec.now=true; }
+  putShelf(id,rec,true);
+}
 function fbInit(){
   staffCopy("Connecting…"); document.body.classList.remove("solo"); document.body.classList.add("live");
   fbStream("tower/state","",fb.state,()=>{ fb.got=true; fbAdopt(); });
   fbStream("pulls","orderBy=%22t%22&limitToLast=200",pulls.box,()=>{ if(fb.got) renderPulls(); });
-  fbStream("tower/log","orderBy=%22%24key%22&limitToLast=1500",fb.logs,()=>{ for(const k in fb.pend) if(fb.logs.v&&fb.logs.v[k]) delete fb.pend[k]; fbLogBuild(); if(fb.got) renderUsage(); });
+  fbStream("tower/log","orderBy=%22%24key%22&limitToLast=2000",fb.logs,()=>{ for(const k in fb.pend) if(fb.logs.v&&fb.logs.v[k]) delete fb.pend[k]; for(const k of tap.gone) if(fb.logs.v) delete fb.logs.v[k]; fbLogBuild(); if(fb.got) soon(); });
+  fbStream("shelf","",shelf.box,()=>{ if(fb.got) soon(); });
   try{ const s=JSON.parse(localStorage.getItem(LS+"-fb")||"null"); if(s&&s.rt&&s.uid){ fb.user=s; fb.role="pending"; fbRole(); } }catch(e){}
   renderAcct();
 }
@@ -640,7 +728,7 @@ document.getElementById("acct").onclick=()=>{ acctOpen=!acctOpen; acctMsg=""; if
 
 /* ---------- actions ---------- */
 function logEvent(id,d){ if(LIVE){ fbLog(id,d); return; } S.log.push({t:Date.now(),id,n:slot(id).n,d}); if(S.log.length>1500) S.log=S.log.slice(-1500); }
-function setAll(id,v){ sibs(id).forEach(k=>{ if(S.slots[k]) S.slots[k].c=v; }); }
+function setAll(id,v){ const now=Date.now(); sibs(id).forEach(k=>{ if(S.slots[k]){ S.slots[k].c=v; S.slots[k].ct=now; } }); }
 function pull(id){ const s=slot(id); if(s.c>0) logEvent(id,-1); setAll(id,(s.c==null||s.c<=0)?0:Math.max(0,Math.round((s.c-1)*100)/100)); touch(sibs(id)); renderAll(); }
 function add(id){ const s=slot(id); logEvent(id,1); setAll(id,(s.c==null?0:s.c)+1); touch(sibs(id)); renderAll(); }
 function setCount(id,v){ setAll(id,(v===""||isNaN(v))?null:Math.max(0,Math.round(+v*100)/100)); touch(sibs(id)); renderAll(); }
@@ -698,10 +786,13 @@ function drawLabel(q,id,st){ // a readable tag: slot code, wine name, bottles on
   cx.fillStyle=COL[st]; cx.fillRect(bb[0],bb[1],bar,h);
   cx.textBaseline="alphabetic"; cx.textAlign="left";
   cx.font="600 "+(fs*.82).toFixed(1)+"px "+FONT; cx.fillStyle="#c9a36a"; cx.fillText(id,bb[0]+pad,bb[1]+fs*.98);
-  const cnt=st==="empty"?"":(s.c==null?"?":(st==="out"?"OUT":String(s.c)));
+  const oh=onHand(id), cnt=st==="empty"?"":(oh==null?"?":(st==="out"?"OUT":String(oh)));
   if(cnt){ cx.font="700 "+(fs*(st==="out"?.9:1.2)).toFixed(1)+"px "+FONT; cx.textAlign="right"; cx.fillStyle=st==="unk"?"#a3958f":COL[st]; cx.fillText(cnt,bb[2]-5,bb[1]+fs*1.12); }
   cx.textAlign="left"; cx.font="600 "+fs.toFixed(1)+"px "+FONT; cx.fillStyle=st==="empty"?"#7c7072":"#efe7e2";
   fitLines(s.n||"open",w-pad-5,h>=fs*3.15?2:1).forEach((l,i)=>cx.fillText(l,bb[0]+pad,bb[1]+fs*2.05+i*fs*1.04));
+  const hv=st==="empty"?null:here(id); // how full the slot is: thin bar along the bottom
+  if(hv!=null){ const f=fillOf(id)||Math.max(hv,1), fr=Math.max(0,Math.min(1,hv/f)), gh=Math.max(2.5,Math.min(5,h*.08)), x0=bb[0]+pad, x1=bb[2]-4, y=bb[3]-gh-1.5;
+    cx.fillStyle="rgba(0,0,0,.5)"; cx.fillRect(x0,y,x1-x0,gh); cx.fillStyle=hv===0?COL.out:(fr<1?COL.low:COL.ok); cx.fillRect(x0,y,hv===0?x1-x0:(x1-x0)*fr,gh); }
   cx.restore();
 }
 let PEND={}, pulse=0, pulseOn=false, GLOW=[];
@@ -860,7 +951,7 @@ function drawOutside(){
           if(st==="out"){ cx.fillStyle="rgba(255,90,79,.18)"; cx.fill(); }
         }
         if(rowPx>15&&st!=="empty"){ const m=proj(faceXYZ(f,u0+cw*.64,v0+h*.5)), s=slot(id);
-          cx.fillStyle=st==="out"?COL.out:"#141112"; cx.font="600 "+Math.min(rowPx*.6,15)+"px "+FONT; cx.textAlign="center"; cx.textBaseline="middle"; cx.fillText(s.c==null?"?":s.c,m[0],m[1]); }
+          cx.fillStyle=st==="out"?COL.out:"#141112"; cx.font="600 "+Math.min(rowPx*.6,15)+"px "+FONT; cx.textAlign="center"; cx.textBaseline="middle"; const oh=onHand(id); cx.fillText(oh==null?"?":oh,m[0],m[1]); }
       }
       outline(cell,id,hit); polys.push({id,q:cell});
     }));
@@ -969,8 +1060,9 @@ function renderSummary(){
    `<div class="chip"><b>${n.out}</b><span><i class="dot d-out"></i>Out</span></div>
     <div class="chip"><b>${n.low}</b><span><i class="dot d-low"></i>Below par</span></div>
     <div class="chip"><b>${n.ok}</b><span><i class="dot d-ok"></i>Stocked</span></div>
-    <div class="chip"><b>${n.unk}</b><span><i class="dot d-unk"></i>Not counted</span></div>`;
-  document.getElementById("src").textContent=LIVE?("Counts update live as editors change them."+(S.sync&&S.sync.audit?" Last Bevager audit "+String(S.sync.audit).split(",")[0]+".":"")):(S.sync?("Counts from "+S.sync.src+" "+S.sync.audit+". Loaded "+new Date(S.sync.t).toLocaleString(undefined,{month:"numeric",day:"numeric",hour:"numeric",minute:"2-digit"})+"."):"");
+    <div class="chip"><b>${n.unk}</b><span><i class="dot d-unk"></i>Not counted</span></div>${LIVE?`<div class="chip link" id="tofill" role="button" tabindex="0"><b>${bringRows().length}</b><span><i class="dot" style="background:var(--brass)"></i>Slots to fill</span></div>`:""}`;
+  const tf=document.getElementById("tofill"); if(tf){ tf.onclick=()=>showView("restock"); tf.onkeydown=e=>{ if(e.key==="Enter") showView("restock"); }; }
+  document.getElementById("src").textContent=LIVE?((S.sync&&S.sync.audit?"Bevager audit "+String(S.sync.audit).split(",")[0]+", minus bottles tapped out since.":"Building counts minus bottles tapped out.")+" Updates live."):(S.sync?("Counts from "+S.sync.src+" "+S.sync.audit+". Loaded "+new Date(S.sync.t).toLocaleString(undefined,{month:"numeric",day:"numeric",hour:"numeric",minute:"2-digit"})+"."):"");
 }
 function renderFaces(){ document.getElementById("faces").innerHTML=S.sections.map(s=>`<button data-f="${FACE_OF[s.id]??0}">${s.id}s</button>`).join("")+`<button data-f="3">Door</button>`; }
 document.getElementById("detail").addEventListener("click",e=>{ if(e.target.closest(".ava")){ EMO.sel=null; renderDetail(); } });
@@ -983,8 +1075,24 @@ function avatarNow(){ // a random emote each time a wine is picked; a re-draw mi
   return AVATAR.replace('class="ava"','class="ava'+(on?" "+EMO.cls:"")+(fresh?" fresh":"")+'" style="--d:'+(-el).toFixed(2)+'s"'); }
 function factFor(id){ const s=slot(id); if(!s.n) return ""; const k=nrm(s.n).replace(/[^a-z0-9]/g,""), f=window.FACTS&&window.FACTS[k]; if(f) return f;
   const wi=typeof info==="function"&&info(id); return wi&&wi.r&&wi.g?wi.g+" from "+wi.r+(wi.c&&wi.r.indexOf(wi.c)<0?", "+wi.c:"")+".":""; }
+let PICK=null, MORE=false;
+function shelfHtml(id){
+  const s=slot(id); if(!s.n) return "";
+  const h=here(id), f=fillOf(id), cls=h===0?"zero":(h!=null&&f&&h<f?"part":"");
+  const oh=onHand(id), used=takenSince(id), aud=S.sync&&S.sync.audit?String(S.sync.audit).split(",")[0]:"";
+  let pick="";
+  if(PICK===id){ const cur=h==null?-1:h;
+    pick=`<div class="pick"><p>How many bottles are in ${esc(id)} now?</p><div class="pgrid">${[...Array(14).keys()].map(n=>`<button data-n="${n}" class="${n===cur?"cur":""}">${n}</button>`).join("")}</div>
+      <div class="pfoot">${MORE?`<input id="pmore" inputmode="numeric" placeholder="#" aria-label="Number of bottles"><button class="btn" id="pmoreok">Save</button>`:`<button class="btn" id="pmorebtn">More than 13</button>`}<button class="btn" id="pclose">Cancel</button></div>
+      <div class="pfoot"><span>A full slot holds</span><span class="fstep"><button id="fminus" aria-label="Holds fewer">−</button><span>${f||"?"}</span><button id="fplus" aria-label="Holds more">+</button></span></div></div>`; }
+  return `<div class="shelf"><div class="sh-top"><div class="sh-n ${cls}"><b>${h==null?"?":h}</b><span>${h==null?"in this slot, not counted yet":(f?"of "+f+" in this slot":"in this slot")}</span></div>
+    <button class="took" id="took">Took one</button></div>
+    ${PICK===id?"":`<button class="rst" id="rst">${h==null?"Count this slot":"Restocked or recount"}</button>`}${pick}
+    <p class="bld">${oh==null?"Building count not known yet.":`Whole building: <b>${oh}</b>${s.w?"":""}`}${oh!=null&&aud?` · Bevager ${esc(aud)}`:""}${oh!=null&&used?` · ${used} tapped out since`:""}</p></div>`;
+}
 function renderDetail(keepFocus){
-  if(keepFocus&&document.activeElement&&document.activeElement.id==="dName") return;
+  const ae=document.activeElement; if(keepFocus&&ae&&ae.tagName==="INPUT"&&(ae.id==="dName"||ae.id==="dCount"||ae.id==="pmore")) return;
+  if(PICK!==sel){ PICK=null; MORE=false; }
   const s=slot(sel), st=status(sel);
   document.getElementById("detail").innerHTML=
    `<div class="top"><span class="code">${esc(sel)}</span><span class="pill s-${st}">${LABEL[st]}</span>
@@ -993,48 +1101,84 @@ function renderDetail(keepFocus){
     ${(()=>{ const wi=typeof info==="function"&&info(sel); return wi&&wi.r?`<p class="note" style="margin:-4px 0 6px;color:var(--text)"><i class="dot" style="background:${CCOL[wi.c]||CCOL[""]}"></i> ${esc(wi.r)}${wi.c&&wi.r.indexOf(wi.c)<0?", "+esc(wi.c):""}${wi.g?" · "+esc(wi.g):""}</p>`:""; })()}
     ${(()=>{ const f=factFor(sel); return f?`<div class="guide">${avatarNow()}<p class="say">${esc(f)}</p></div>`:""; })()}
     ${s.w?`<p class="note" style="margin:-4px 0 10px">Bevager: ${esc(s.w)}${s.vt?" · "+esc(s.vt):""}${sibs(sel).length>1?" · stock shared with "+sibs(sel).filter(k=>k!==sel).join(", "):""}</p>`:""}
-    <div class="rowctl">
-      <div class="ctl"><label for="dCount">On hand</label><div class="step"><button id="minus" aria-label="Pulled one bottle">−</button><input id="dCount" inputmode="numeric" value="${s.c==null?"":s.c}" placeholder="?"><button id="plus" aria-label="Added one bottle">+</button></div></div>
+    ${LIVE?shelfHtml(sel):""}
+    ${LIVE&&readOnly?"":`<div class="rowctl">
+      <div class="ctl"><label for="dCount">${LIVE?"Building count":"On hand"}</label><div class="step">${LIVE?"":`<button id="minus" aria-label="Pulled one bottle">−</button>`}<input id="dCount" inputmode="decimal" value="${s.c==null?"":(LIVE?onHand(sel):s.c)}" placeholder="?">${LIVE?"":`<button id="plus" aria-label="Added one bottle">+</button>`}</div></div>
       <div class="ctl"><label for="dPar">Par</label><div class="step"><button id="pminus" aria-label="Lower par">−</button><input id="dPar" inputmode="numeric" value="${s.p}"><button id="pplus" aria-label="Raise par">+</button></div></div>
-    </div>
+    </div>`}
     <p class="note" style="color:var(--text)">${esc(whereText(sel))}</p>
-    <p class="note">${readOnly?(LIVE?"View only. Editors sign in at the top of the page to change counts.":"View only. You can search and look, but counts can only be changed by an editor."):"− logs a bottle pulled and + logs a bottle added. Typing a number corrects the count without logging."}</p>`;
+    <p class="note">${LIVE?(readOnly?"Anyone can tap Took one or Restocked. Editors sign in at the top to change names and par.":"Took one and Restocked are for everyone. Typing a building count corrects it; the weekly Bevager audit replaces it."):(readOnly?"View only. You can search and look, but counts can only be changed by an editor.":"− logs a bottle pulled and + logs a bottle added. Typing a number corrects the count without logging.")}</p>`;
   if(readOnly) document.querySelectorAll("#detail .step button, #detail .step input").forEach(x=>{ x.disabled=true; });
-  const $=id=>document.getElementById(id);
-  $("minus").onclick=()=>pull(sel); $("plus").onclick=()=>add(sel);
-  $("pminus").onclick=()=>setPar(sel,slot(sel).p-1); $("pplus").onclick=()=>setPar(sel,slot(sel).p+1);
-  $("dCount").onchange=e=>setCount(sel,e.target.value); $("dPar").onchange=e=>setPar(sel,e.target.value);
+  const $=id=>document.getElementById(id), on=(id,ev,f)=>{ const x=$(id); if(x) x[ev]=f; };
+  on("minus","onclick",()=>pull(sel)); on("plus","onclick",()=>add(sel));
+  on("pminus","onclick",()=>setPar(sel,slot(sel).p-1)); on("pplus","onclick",()=>setPar(sel,slot(sel).p+1));
+  on("dCount","onchange",e=>setCount(sel,e.target.value)); on("dPar","onchange",e=>setPar(sel,e.target.value));
+  on("took","onclick",()=>tookOne(sel)); on("rst","onclick",()=>{ PICK=sel; MORE=false; renderDetail(); });
+  on("pclose","onclick",()=>{ PICK=null; renderDetail(); });
+  on("pmorebtn","onclick",()=>{ MORE=true; renderDetail(); const m=$("pmore"); if(m) m.focus(); });
+  const more=()=>{ const v=$("pmore").value.trim(); if(v!==""&&!isNaN(v)){ PICK=null; setHere(sel,v); } };
+  on("pmoreok","onclick",more); on("pmore","onkeydown",e=>{ if(e.key==="Enter") more(); });
+  on("fminus","onclick",()=>setFill(sel,(fillOf(sel)||here(sel)||2)-1)); on("fplus","onclick",()=>setFill(sel,(fillOf(sel)||here(sel)||0)+1));
+  document.querySelectorAll("#detail .pgrid button").forEach(b=>{ b.onclick=()=>{ PICK=null; setHere(sel,+b.dataset.n); }; });
   $("dName").onchange=e=>setName(sel,e.target.value);
   $("prev").onclick=()=>step(-1); $("next").onclick=()=>step(1);
 }
 function step(d){ const all=slotList().filter(x=>x.col===sel.replace(/^\d+/,"")&&x.sec.rows.includes(parseInt(sel))); const i=all.findIndex(x=>x.id===sel); const n=all[i+d]; if(n){ sel=n.id; renderAll(); focusSlot(sel,true); } }
+let COUNTING=false;
 function renderSheet(){
-  let h="";
+  const ae=document.activeElement, el0=document.getElementById("v-sheet");
+  if(COUNTING&&ae&&ae.dataset&&ae.dataset.h&&el0.contains(ae)){ el0.querySelectorAll("input[data-h]").forEach(i=>{ if(i!==ae){ const v=here(i.dataset.h); i.value=v==null?"":v; i.classList.toggle("set",v!=null); } }); return; }
+  let h=LIVE?`<div class="toolbar"><button class="btn" id="cmode" aria-pressed="${COUNTING}" style="${COUNTING?"border-color:var(--brass);color:var(--brass)":""}">${COUNTING?"Done counting":"Count slots"}</button><span class="note" style="margin:0">${COUNTING?"Type how many bottles are in each slot. It saves as you go.":"Walk a wall and enter every slot's count in one go."}</span></div>`:"";
   for(const sec of S.sections){
     h+=`<h2>${sec.id}s ${readOnly?"":`<button class="btn" data-add="${sec.id}">Add row on top</button>`}</h2><div class="sheetwrap"><table><thead><tr><th>#</th>${sec.cols.map(c=>`<th>${c}</th>`).join("")}</tr></thead><tbody>`;
     for(const r of sec.rows.slice().reverse()){
-      h+=`<tr><td class="rown">${r}</td>`+sec.cols.map(c=>{ const id=r+c,s=slot(id),st=status(id); if(query&&!matches(id)) return `<td style="opacity:.3"><button class="cell" data-slot="${id}"><i class="dot d-${st}"></i><span>${esc(s.n||"open")}</span></button></td>`;
-        return `<td><button class="cell" data-slot="${id}"><i class="dot d-${st}"></i><span>${esc(s.n||"open")} <small>${s.n?(s.c==null?"?":s.c)+"/"+s.p:""}</small></span></button></td>`; }).join("")+`</tr>`;
+      h+=`<tr><td class="rown">${r}</td>`+sec.cols.map(c=>{ const id=r+c,s=slot(id),st=status(id);
+        if(COUNTING){ const v=here(id); return s.n?`<td><label class="cntin"><span>${esc(s.n)}</span><input data-h="${id}" inputmode="numeric" value="${v==null?"":v}" placeholder="?" class="${v!=null?"set":""}" aria-label="Bottles in ${id}"></label></td>`:`<td><span class="note" style="margin:0">open</span></td>`; }
+        if(query&&!matches(id)) return `<td style="opacity:.3"><button class="cell" data-slot="${id}"><i class="dot d-${st}"></i><span>${esc(s.n||"open")}</span></button></td>`;
+        return `<td><button class="cell" data-slot="${id}"><i class="dot d-${st}"></i><span>${esc(s.n||"open")} <small>${s.n?(LIVE?(here(id)==null?"":here(id)+" here · ")+(onHand(id)==null?"?":onHand(id)):(s.c==null?"?":s.c)+"/"+s.p):""}</small></span></button></td>`; }).join("")+`</tr>`;
     }
     h+=`</tbody></table></div>`;
   }
   h+=`<p class="note">Top of the tower is listed first. Columns read A, B, C left to right when you stand inside facing that wall. Tap a wine to open its slot on the tower.</p>`;
   const el=document.getElementById("v-sheet"); el.innerHTML=h;
 }
-document.getElementById("v-sheet").onclick=e=>{ const a=e.target.closest("[data-add]"); if(a){ addRow(a.dataset.add); showView("tower"); focusSlot(sel,true); return; }
+document.getElementById("v-sheet").addEventListener("change",e=>{ const i=e.target.closest("input[data-h]"); if(!i) return; const v=i.value.trim(); if(v===""||isNaN(v)) return; setHere(i.dataset.h,v,true); i.classList.add("set"); });
+document.getElementById("v-sheet").addEventListener("keydown",e=>{ const i=e.target.closest("input[data-h]"); if(!i||e.key!=="Enter") return; e.preventDefault(); const all=[...document.querySelectorAll("#v-sheet input[data-h]")], n=all[all.indexOf(i)+1]; i.blur(); if(n) n.focus(); });
+document.getElementById("v-sheet").onclick=e=>{ if(e.target.closest("#cmode")){ COUNTING=!COUNTING; renderSheet(); return; } if(e.target.closest("input[data-h],.cntin")) return; const a=e.target.closest("[data-add]"); if(a){ addRow(a.dataset.add); showView("tower"); focusSlot(sel,true); return; }
   const b=e.target.closest("[data-slot]"); if(b&&S.slots[b.dataset.slot]){ sel=b.dataset.slot; showView("tower"); renderAll(); focusSlot(sel,true); } };
 function restockRows(){
-  const by={}; for(const s of slotList()){ const st=status(s.id); if(st!=="low"&&st!=="out") continue; const d=slot(s.id); const k=(d.w||d.n).toLowerCase(); const g=(by[k]=by[k]||{n:d.n,w:d.w,slots:[],have:0,par:0}); g.slots.push(s.id); g.have=d.w?d.c:g.have+d.c; g.par+=d.p; }
-  return Object.values(by).map(x=>({...x,need:x.par-x.have})).sort((a,b)=>(a.have===0?0:1)-(b.have===0?0:1)||b.need-a.need||a.n.localeCompare(b.n));
+  const by={}; for(const s of slotList()){ const st=status(s.id); if(st!=="low"&&st!=="out") continue; const d=slot(s.id); const k=(d.w||d.n).toLowerCase(); const g=(by[k]=by[k]||{n:d.n,w:d.w,slots:[],have:0,par:0}); g.slots.push(s.id); g.have=d.w?onHand(s.id):g.have+onHand(s.id); g.par+=d.p; }
+  return Object.values(by).map(x=>({...x,need:Math.ceil(Math.round((x.par-x.have)*100)/100)})).sort((a,b)=>(a.have===0?0:1)-(b.have===0?0:1)||b.need-a.need||a.n.localeCompare(b.n));
+}
+function bringRows(){
+  if(!LIVE) return [];
+  const out=[], ord={}; S.sections.forEach((x,i)=>ord[x.id]=i);
+  for(const s of slotList()){ const d=slot(s.id); if(!d.n) continue; const h=here(s.id); if(h==null) continue; const f=fillOf(s.id); if(!(h===0||(f&&h<f))) continue;
+    const g=sibs(s.id), oh=onHand(s.id), back=oh==null?null:Math.floor(oh-g.reduce((a,k)=>a+(here(k)||0),0)+1e-9), want=f?f-h:null;
+    out.push({id:s.id,sec:s.sec.id,row:s.row,n:d.n,h,f,want,back,bring:back!=null&&back<=0?0:(want==null?back:(back==null?want:Math.min(want,back)))}); }
+  return out.sort((a,b)=>ord[a.sec]-ord[b.sec]||a.row-b.row||a.id.localeCompare(b.id));
 }
 function renderRestock(){
-  const rows=restockRows(), unk=slotList().filter(s=>status(s.id)==="unk").length;
+  const rows=restockRows(), unk=slotList().filter(s=>status(s.id)==="unk").length, br=bringRows();
+  const wineSlots=slotList().filter(s=>slot(s.id).n), uncounted=LIVE?wineSlots.filter(s=>here(s.id)==null).length:0;
   let h=`<div class="toolbar"><button class="btn" id="copy">Copy restock list</button><span class="note" id="copied" style="margin:0"></span></div><textarea id="copyOut" readonly aria-label="Restock list text"></textarea>`;
+  if(LIVE){
+    h+=`<h2>Bring up to the tower</h2>`;
+    if(!br.length) h+=`<p class="empty">${uncounted===wineSlots.length?"No slots have been counted yet. Tap Count this slot on a wine, or use Count slots on the Sheet tab.":"Every counted slot is full."}</p>`;
+    else{ let last=""; h+=`<table><thead><tr><th>Slot</th><th>Wine</th><th class="num">In slot</th><th class="num">Bring</th></tr></thead><tbody>`;
+      for(const r of br){ if(r.sec!==last){ last=r.sec; h+=`<tr><td colspan="4" class="wallh">${r.sec}s wall</td></tr>`; }
+        h+=`<tr><td><button class="cell" data-slot="${r.id}" style="display:inline;width:auto;color:var(--brass);font-family:var(--display);font-size:18px;font-weight:700">${r.id}</button></td><td><i class="dot d-${r.h===0?"out":"low"}"></i> ${esc(r.n)}${r.back!=null&&r.back<=0?`<br><span class="noback">None in back. Reorder.</span>`:""}</td><td class="num">${r.h}${r.f?" of "+r.f:""}</td><td class="num"><b>${r.bring==null?"Fill":r.bring}</b></td></tr>`; }
+      h+=`</tbody></table>`; }
+    if(uncounted&&uncounted<wineSlots.length) h+=`<p class="note">${uncounted} of ${wineSlots.length} wine slots haven't been counted, so they can't show up here.</p>`;
+    h+=`<h2>Reorder</h2><p class="note" style="margin-top:-2px">Whole-building stock below par.</p>`;
+  }
   if(!rows.length) h+=`<p class="empty">Nothing counted is below par.</p>`;
   else h+=`<table><thead><tr><th>Wine</th><th>Slots</th><th class="num">Have</th><th class="num">Par</th><th class="num">Bring</th></tr></thead><tbody>`+rows.map(r=>`<tr><td><i class="dot d-${r.have===0?"out":"low"}"></i> ${esc(r.n)}${r.w?`<br><small style="color:var(--muted)">${esc(r.w)}</small>`:""}</td><td>${r.slots.map(id=>`<button class="cell" data-slot="${id}" style="display:inline;width:auto;color:var(--brass)">${id}</button>`).join(" ")}</td><td class="num">${r.have}</td><td class="num">${r.par}</td><td class="num"><b>${r.need}</b></td></tr>`).join("")+`</tbody></table>`;
   if(unk) h+=`<p class="note">${unk} slots have no count yet, so they cannot show up here. Count them on the Tower tab.</p>`;
   const el=document.getElementById("v-restock"); el.innerHTML=h;
-  document.getElementById("copy").onclick=()=>{ const txt=rows.length?"Tower restock "+new Date().toLocaleDateString()+"\n"+rows.map(r=>`${r.need} x ${r.w||r.n} (${r.slots.join(", ")}) have ${r.have}, par ${r.par}`).join("\n"):"Tower restock: nothing below par.";
+  document.getElementById("copy").onclick=()=>{ const d=new Date().toLocaleDateString();
+    const up=br.length?"Bring up to the tower "+d+"\n"+br.map(r=>`${r.id}  ${r.n}: ${r.bring==null?"fill it":r.bring>0?"bring "+r.bring:"none in back"} (has ${r.h}${r.f?" of "+r.f:""})`).join("\n")+"\n\n":"";
+    const txt=up+(rows.length?"Reorder "+d+"\n"+rows.map(r=>`${r.need} x ${r.w||r.n} (${r.slots.join(", ")}) have ${r.have}, par ${r.par}`).join("\n"):"Reorder: nothing below par.");
     const out=document.getElementById("copyOut"), msg=document.getElementById("copied");
     const fallback=()=>{ out.style.display="block"; out.value=txt; out.select(); msg.textContent="Select the text below and copy it."; };
     try{ navigator.clipboard.writeText(txt).then(()=>{ msg.textContent="Copied."; },fallback); }catch(e){ fallback(); } };
@@ -1045,7 +1189,7 @@ function renderUsage(){
   for(const ev of S.log){ if(ev.d>=0||ev.t<since) continue; const k=(ev.n||ev.id).toLowerCase(); (by[k]=by[k]||{n:ev.n||ev.id,q:0,last:0}); by[k].q+=-ev.d; by[k].last=Math.max(by[k].last,ev.t); }
   const rows=Object.values(by).sort((a,b)=>b.q-a.q), max=rows.length?rows[0].q:1, total=rows.reduce((a,r)=>a+r.q,0);
   let h=`<div class="toolbar"><div class="seg">${[7,30,90].map(d=>`<button data-d="${d}" class="${d===usageDays?"on":""}">${d} days</button>`).join("")}</div><span class="note" style="margin:0">${total} bottles pulled</span></div>`;
-  if(!rows.length) h+=`<p class="empty">No bottles pulled in this window. Each tap of − on a slot is logged here.</p>`;
+  if(!rows.length) h+=`<p class="empty">No bottles pulled in this window. Every Took one tap is logged here.</p>`;
   else h+=`<table><thead><tr><th>Wine</th><th class="num">Pulled</th><th class="num">Per week</th><th class="num">Last</th></tr></thead><tbody>`+rows.map(r=>`<tr><td>${esc(r.n)}<div class="bar"><i style="width:${Math.round(r.q/max*100)}%"></i></div></td><td class="num">${r.q}</td><td class="num">${(r.q/usageDays*7).toFixed(1)}</td><td class="num">${new Date(r.last).toLocaleDateString(undefined,{month:"numeric",day:"numeric"})}</td></tr>`).join("")+`</tbody></table>`;
   const el=document.getElementById("v-usage"); el.innerHTML=h;
   el.querySelector(".seg").onclick=e=>{ const b=e.target.closest("button"); if(b){ usageDays=+b.dataset.d; renderUsage(); } };
@@ -1060,7 +1204,7 @@ function renderResults(){
   const ids=slotList().map(s=>s.id).filter(id=>HIT.has(id));
   if(!ids.length){ el.innerHTML=`<p class="note">Nothing in the tower matches “${esc(query)}”.</p>`; return; }
   el.innerHTML=ids.slice(0,8).map(id=>{ const s=slot(id), st=status(id);
-    return `<button class="res" data-slot="${id}"><i class="dot d-${st}"></i><span class="rn"><b>${esc(s.n||"open")}</b>${s.w&&nrm(s.w)!==nrm(s.n)?`<small>${esc(s.w)}${s.vt?" · "+esc(s.vt):""}</small>`:""}<small>${esc(shortWhere(id))}</small></span><span class="rc"><b>${esc(id)}</b><small>${st==="empty"?"":s.c==null?"not counted":s.c<=0?"out":s.c+" on hand"}</small></span></button>`; }).join("")
+    return `<button class="res" data-slot="${id}"><i class="dot d-${st}"></i><span class="rn"><b>${esc(s.n||"open")}</b>${s.w&&nrm(s.w)!==nrm(s.n)?`<small>${esc(s.w)}${s.vt?" · "+esc(s.vt):""}</small>`:""}<small>${esc(shortWhere(id))}</small></span><span class="rc"><b>${esc(id)}</b><small>${st==="empty"?"":onHand(id)==null?"not counted":onHand(id)<=0?"out":onHand(id)+" on hand"}${here(id)!=null?" · "+here(id)+" in slot":""}</small></span></button>`; }).join("")
     +(ids.length>8?`<p class="note">${ids.length-8} more. Keep typing to narrow it down.</p>`:"");
 }
 document.getElementById("results").onclick=e=>{ const b=e.target.closest("[data-slot]"); if(!b||!S.slots[b.dataset.slot]) return; sel=b.dataset.slot; document.getElementById("search").blur(); showView("tower"); renderAll(); focusSlot(sel,true); document.getElementById("stage").scrollIntoView({block:"nearest"}); };
