@@ -176,7 +176,9 @@ body.offline .livestat i{background:var(--low)}
 .guide{display:flex;gap:8px;align-items:flex-end}
 .guide .say{position:relative;flex:1;background:#262020;border:1px solid var(--line-2);border-radius:16px;padding:12px 14px;font-size:15px;line-height:1.42;color:var(--text);margin:0 0 22px}
 .guide .say:before{content:"";position:absolute;left:-7px;bottom:18px;width:12px;height:12px;background:#262020;border-left:1px solid var(--line-2);border-bottom:1px solid var(--line-2);transform:rotate(45deg)}
-.guide .ava{width:94px;height:auto;flex:none}
+.guide .ava{width:94px;height:auto;flex:none;display:block}
+.avbtn{flex:none;padding:0;border:0;background:none;line-height:0;border-radius:16px;touch-action:manipulation}
+.avbtn:active .ava{transform:scale(.96)}
 @media (prefers-reduced-motion:no-preference){ .guide .ava.fresh{animation:avapop .35s ease-out} .guide .ava-eyes{transform-origin:60px 63px;animation:avablink 5s infinite} }
 .guide .ava{overflow:visible;cursor:pointer}
 .ava .em{opacity:0}
@@ -1035,6 +1037,11 @@ function openSlot(id,focus){ if(!S.slots[id]) return; sel=id; CARD=true; EMO.sel
   setTimeout(()=>{ const x=document.getElementById("xclose"); if(x) x.focus({preventScroll:true}); },60); }
 function closeSheet(){ if(!CARD) return; CARD=false; PICK=null; const p=document.getElementById("panel"); p.style.transform=""; document.getElementById("sheet").hidden=true; document.body.style.overflow=""; renderAll(true); }
 document.getElementById("scrim").onclick=closeSheet;
+function playEmote(){ // every tap on Ben starts a different move from the one before
+  const all=["e-sip","e-pop","e-flip"].filter(c=>c!==EMO.cls); EMO={sel,cls:all[Math.floor(Math.random()*all.length)],t0:Date.now()};
+  const old=document.querySelector("#detail .avbtn"); if(!old) return; const tmp=document.createElement("div"); tmp.innerHTML=avatarNow(); old.replaceChildren(tmp.firstChild);
+  try{ navigator.vibrate&&navigator.vibrate(8); }catch(x){} }
+document.getElementById("detail").addEventListener("click",e=>{ if(e.target.closest(".avbtn")) playEmote(); });
 document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&CARD) closeSheet(); });
 { const g=document.getElementById("grab"), p=document.getElementById("panel"); let y0=null, dy=0;
   g.addEventListener("pointerdown",e=>{ y0=e.clientY; dy=0; g.setPointerCapture(e.pointerId); });
@@ -1337,7 +1344,7 @@ function renderDetail(keepFocus){
    `<div class="top"><div class="cw"><span class="code">${esc(sel)}</span><span class="where">${esc(shortWhere(sel))}</span></div>
       <button class="xbtn" id="xclose" aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></div>
     <div><h2 class="wname${s.n?"":" open"}">${esc(s.n||"Open slot")}</h2>${meta?`<div class="wmeta">${esc(meta)}</div>`:""}${pill}</div>
-    ${f?`<div class="guide">${avatarNow()}<p class="say">${esc(f)}</p></div>`:""}
+    ${f?`<div class="guide"><button class="avbtn" aria-label="Tap Ben for one of his moves">${avatarNow()}</button><p class="say">${esc(f)}</p></div>`:""}
     ${LIVE&&s.n?`<div class="hair"></div>${shelfHtml(sel)}`:oldCount}
     ${s.w?`<p class="note">Bevager: ${esc(s.w)}${s.vt?" · "+esc(s.vt):""}${sibs(sel).length>1?" · stock shared with "+sibs(sel).filter(k=>k!==sel).join(", "):""}</p>`:""}
     <p class="note">${esc(whereText(sel))}</p>
