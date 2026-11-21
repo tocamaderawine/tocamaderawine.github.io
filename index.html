@@ -544,7 +544,7 @@ function fillOf(id){ const r=shelfRec(id); return r&&r.f?r.f:null; }
 function applySync(y,countsOnly){
   if(!y||!y.items||!(y.t>(S.syncT||0))) return false;
   for(const id in y.items){ const s=S.slots[id], it=y.items[id]; if(!s||!it) continue;
-    if(it.n!=null&&!countsOnly) s.n=it.n; if("c" in it){ s.c=(it.c==null?null:it.c); s.ct=y.t; }
+    if(it.n!=null&&!countsOnly) s.n=it.n; if("c" in it&&!(countsOnly&&s.ct>y.t)){ s.c=(it.c==null?null:it.c); s.ct=y.t; }
     if("p" in it&&!countsOnly) s.p=it.p;
     if("w" in it){ if(it.w) s.w=it.w; else delete s.w; } if("vt" in it){ if(it.vt) s.vt=it.vt; else delete s.vt; } }
   if(y.clearLogBefore) S.log=S.log.filter(e=>e.t>=y.clearLogBefore);
@@ -1403,25 +1403,25 @@ function bringRows(){
 }
 const fmt$=n=>"$"+n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,",");
 let BUD=0; try{ BUD=+localStorage.getItem("tw_budget")||0; }catch(e){}
-function costOf(slots){ const C=(window.COSTS&&COSTS.items)||{}; for(const k of slots){ if(C[k]) return C[k]; } return null; }
+function costOf(r){ const v=((window.COSTS&&COSTS.items)||{})[(r.w||r.n||"").toLowerCase()]; return v&&v[0]>0?{u:v[0],s:v[1]}:null; }
 function budgetPlan(rows,budget){
-  const w=rows.map(r=>{ const c=costOf(r.slots); return {r,c,line:c?r.need*c.u:null}; });
+  const w=rows.map(r=>{ const c=costOf(r); return {r,c,line:c?r.need*c.u:null}; });
   const priced=w.filter(x=>x.c).sort((a,b)=>b.c.s-a.c.s||a.c.u-b.c.u), none=w.filter(x=>!x.c);
   let sum=0; const buy=[], skip=[];
   for(const x of priced){ if(sum+x.line<=budget+1e-9){ sum+=x.line; buy.push(x); } else skip.push(x); }
   return {buy,skip,none,sum,left:budget-sum,btl:buy.reduce((a,x)=>a+x.r.need,0)};
 }
 function reRow(r,c){
-  const cost=c?" · "+fmt$(c.u)+"/btl · sold "+c.s+" in 90d":"";
+  const cost=c?" · "+fmt$(c.u)+"/btl · sold "+(Math.round(c.s*10)/10)+" in 90 days":"";
   return `<button class="lrow" data-slot="${r.slots[0]}"><span class="lc">${r.slots[0]}</span><span class="lm"><b>${esc(r.n)}</b><small class="${r.have<=0?"r":""}">${r.have<=0?"Out":"Have "+r.have+" · par "+r.par}${r.slots.length>1?" · slots "+r.slots.join(", "):""}${cost}</small></span><span class="lq${r.have<=0?" r":""}"><b>${r.need}</b><span>Order</span></span></button>`;
 }
 function reorderHtml(rows){
   let h=`<div class="bud"><label for="bud">Budget $</label><input id="bud" inputmode="decimal" placeholder="e.g. 2300" value="${BUD||""}"></div>`;
-  if(!(BUD>0)) return h+`<div style="margin-top:8px">`+rows.map(r=>reRow(r,costOf(r.slots))).join("")+`</div>`;
+  if(!(BUD>0)) return h+`<div style="margin-top:8px">`+rows.map(r=>reRow(r,costOf(r))).join("")+`</div>`;
   const p=budgetPlan(rows,BUD), grp=(t,note,xs)=>xs.length?`<div class="wallh"><b>${t} · ${xs.length}</b><span>${note}</span></div>`+xs.map(x=>reRow(x.r,x.c)).join(""):"";
   h+=`<p class="note" style="margin:8px 4px">${fmt$(p.sum)} of ${fmt$(BUD)} · ${fmt$(Math.max(p.left,0))} left · ${p.btl} bottles</p>`;
   h+=grp("Buy","Fastest sellers first",p.buy)+grp("Doesn't fit","Over what is left",p.skip)+grp("No cost data","Not priced, not in the plan",p.none);
-  return h+`<p class="note" style="margin:12px 4px 0">Costs are Bevager averages for ${esc((window.COSTS&&COSTS.window)||"the last 90 days")}, not vendor quotes.</p>`;
+  return h+`<p class="note" style="margin:12px 4px 0">Unit costs from the ${esc((window.COSTS&&COSTS.audit)||"latest")} Bevager audit, not vendor quotes. Bottles sold ${esc((window.COSTS&&COSTS.window)||"in the last 90 days")}.</p>`;
 }
 function budgetText(rows){
   if(!(BUD>0)||!rows.length) return "";
