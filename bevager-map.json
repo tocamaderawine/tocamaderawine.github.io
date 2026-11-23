@@ -1,0 +1,884 @@
+{
+"note": "Which Bevager (Craftable) wine items feed each tower slot, by exact Bevager item name (the leading 'Wine - ' left off). A slot's count is the summed on-hand of every listed item. Built 2026-11-22 from the Bevager item ids in the cellar map. 130C and 337B: their old Bevager items no longer exist, so they have no names yet.",
+"slots": {
+"100A": [
+"Rebholz Riesling Sekt Extra Brut"
+],
+"100B": [
+"Laurent Perrier Grand Siecle No.26",
+"Laurent-Perrier Gran Siecle #27"
+],
+"100C": [
+"Caraccioli Cellars Brut Rose"
+],
+"101A": [
+"Krug Grande Cuvee",
+"Krug Grande Cuvee 169th",
+"Krug Grande Cuvee 171st",
+"Krug Grande Cuvee 172nd"
+],
+"101B": [
+"Louis Jadot Bourgogne Chardonnay"
+],
+"101C": [
+"Domaine Etienne Delarche ‘Corton’ Les Renardes Grand Cru",
+"Domaine Etienne Delarche Corton Renardes Grand Cru 2024",
+"Domaine Etienne Delarche Pernand Veralesses Blanc 1er"
+],
+"102A": [
+"Chateau Sociando Mallet Haut-Medoc 750ml",
+"Chateau Sociando-Mallet Red Blend",
+"Chateau Sociando-mallet, Haut Medoc, Bordeax"
+],
+"102B": [
+"Remoissenet Pere & Fils Pinot Noir, Volnay"
+],
+"102C": [
+"Gevrey Estournelles St Jacques F. Esmonin"
+],
+"103A": [
+"Billaud Simon Chablis"
+],
+"103B": [
+"Domaine Genot-Boulanger Clos Du Cromin",
+"Domaine Genot-Boulanger Meursalt Clos Du Cromin"
+],
+"103C": [
+"PYCM Saint Aubin"
+],
+"104A": [
+"Pierre Peters Cuvee de Reserve GC NV"
+],
+"104B": [
+"Domaine Benoit Chevalier Coteaux Bourguignons",
+"Domaine Benoit Chevallier Coteaux Bourguignon"
+],
+"104C": [
+"Domaine Joseph Roty Gevery Chambertin 'Clos Prieur Bas'"
+],
+"105A": [
+"Frederic Esmonin Ruchottes-Chambertin Grand Cru"
+],
+"105B": [
+"Domaine Patrice Rion Chambolle-Musigny Les Cras"
+],
+"105C": [
+"Anne-Sophie Dubois Fleurie les Cocottes",
+"Anne-Sophie Dubois Fleurie les Cocottes 2024"
+],
+"108A": [
+"George Wine Co Ceremonial Pinot Noir"
+],
+"108B": [
+"Illahe Bon Sauvage Pinot Noir",
+"Illahe Bon Sauvage Pinot Noir 2022 750ml"
+],
+"108C": [
+"Domaine des Tours Vin de Pays de Vaucluse Rouge"
+],
+"109A": [
+"Brooks Janus Pinot Noir"
+],
+"109B": [
+"Benovia Tilton Hill Pinot Noir"
+],
+"109C": [
+"Sokol Blosser Kalita Pinot Noir"
+],
+"110A": [
+"Summer Dreams Stargazing Pinot Noir"
+],
+"110B": [
+"Williams Selyem 'Russian River Valley'",
+"Williams Selyem Pinot Noir"
+],
+"110C": [
+"Nicolas Jay Ensemble Pinot Noir"
+],
+"111A": [
+"Morlet 'Joli Coeur' Pinot Noir"
+],
+"111B": [
+"Boyer Pinot Noir"
+],
+"111C": [
+"Prince Hill \"Du Coeur\" Pinot Noir"
+],
+"112A": [
+"Cathiard Vineyard 'Founding Brothers'"
+],
+"112B": [
+"Chimney Rock Cabernet Sauvignon"
+],
+"112C": [
+"Lucia by Pisoni Estate Pinot Noir"
+],
+"113A": [
+"Daou Soul of a Lion Mag (1.5L)"
+],
+"113B": [
+"Amulet Estate Cabernet Sauvignon",
+"Amulet Estate Napa Valley Cabernet Sauvignon"
+],
+"113C": [
+"Realm The Bard Proprietary Blend"
+],
+"114A": [
+"Darious II Cabernet Sauvignon"
+],
+"114B": [
+"Du Coeur 'Rosebud Vineyard' Cab Sauv, Wahluke Slope"
+],
+"114C": [
+"Morlet 'Mon Chevalier' Cabernet Sauvignon 2017"
+],
+"115A": [
+"Hundred Acre 'Wraith' Cabarnet Sauvignon"
+],
+"115B": [
+"Bond Vecina"
+],
+"115C": [
+"Opus One Overture"
+],
+"116A": [
+"Quintessa",
+"Quintessa 2016"
+],
+"116B": [
+"Paul Hobbs Cabernet Sauvignon"
+],
+"116C": [
+"Faust Cabernet Sauvignon"
+],
+"117A": [
+"Casa Piena Cabernet Sauvignon"
+],
+"117B": [
+"Domaine Mee Goddard Morgon cote du Py",
+"Domaine Mee Goddard Morgon Cote du Py 2023"
+],
+"117C": [
+"Venge Vineyards 'Silencieux' Cabernet Sauvignon"
+],
+"118A": [
+"Chateau Corbin Red",
+"Chateau Corbin, Grand Cru Classe, Saint Emilion Grand Cru"
+],
+"118B": [
+"Caymus Cabernet Sauvignon"
+],
+"118C": [
+"Caymus Cabernet Sauvignon"
+],
+"119A": [
+"Darioush Cabernet Franc"
+],
+"119B": [
+"Chappellet Napa Valley Cabernet Franc"
+],
+"119C": [
+"Heitz Cabernet Sauvignon"
+],
+"120A": [
+"Chateau Beau Sejour Becot Red Blend",
+"Chateau Beau-Sejour Becot, 1er Grand Cru Classe, Saint-Emilion Grand Cru"
+],
+"120B": [
+"Vega Sicilia Ribera del Duero 'Unico' 2012",
+"Vega-Sicilia, 'Unico', Ribera Del Duero, Spain"
+],
+"120C": [
+"Sinegal Estate Cabernet Sauvignon"
+],
+"121A": [
+"Cadrans de Lassegue Saint Emilion"
+],
+"121B": [
+"Schrader Cabernet Sauvignon"
+],
+"121C": [
+"Orin Swift Mercury Head",
+"Orin Swift Mercury Head Cabernet Sauvignon"
+],
+"122A": [
+"Chateau Smith Haut Lafitte 'Pessac-Leognan'",
+"Smith Haut Lafitte"
+],
+"122B": [
+"Fleur Cardinale, St-Emilion"
+],
+"122C": [
+"Chateau de Pez, 2nd Pez Saint Estephe"
+],
+"123A": [
+"Chateau Pontet-Canet Pauillac '5em Grand Cru Classe'; Bordeaux, France",
+"Pontet Canet Pauillac"
+],
+"123B": [
+"Penfolds \"Bin 389\" Cab Shiraz"
+],
+"123C": [
+"Figgins Figlia Red Blend"
+],
+"124A": [
+"Frias Family Vineyard Lady of the Dead"
+],
+"124B": [
+"Jada \"Hell's Kitchen\" Red Blend"
+],
+"124C": [
+"Clos Du Val Yettalil Cabernet Sauvignon"
+],
+"125A": [
+"Gaja Brunello Pieve Santa Restituta, Brunello di Montalcino"
+],
+"125B": [
+"Barbi Brunello di Montalcino"
+],
+"125C": [
+"Il Poggione Brunello di Montalcino"
+],
+"126A": [
+"Gaja Barbaresco"
+],
+"126B": [
+"La Spinetta Barbaresco Straderi"
+],
+"126C": [
+"Gaja Barolo Conteisa"
+],
+"127A": [
+"Tenuta San Guido Sassicia"
+],
+"127B": [
+"Tenuta San Guido Sassicia"
+],
+"127C": [
+"Antinori Tignanello"
+],
+"128A": [
+"Barolo Riserva \"Vignolo\" Cavallotto",
+"Cavallotto Barolo Riserva San Giuseppe"
+],
+"128B": [
+"Borgogno, Barolo"
+],
+"128C": [
+"Diego Barolo Monvigliero"
+],
+"129C": [
+"Cathiard Vineyard 'Hora'"
+],
+"130A": [
+"Planeta Etna Rosso"
+],
+"130B": [
+"Luigi Einaudi Barolo Ludo"
+],
+"130C": [],
+"131A": [
+"Paolo Scavino Barolo Monvigliero"
+],
+"131B": [
+"Produtorri di Barbesco Nebbiolo"
+],
+"131C": [
+"Montes 'Purple Angel'"
+],
+"132A": [
+"Cuna de Tierra 'Pago De Vega'"
+],
+"132B": [
+"Guaname Red Blend"
+],
+"132C": [
+"Joaso Tavares \"Terras de Taveras\" Jean Touriga National"
+],
+"133A": [
+"Alion by Vega Sicilia"
+],
+"133B": [
+"Lopez De Heredia Vina Tondonia Reserva Red",
+"R. Lopez de Heredia, 'Vina Tondonia', Rioja, Spain"
+],
+"133C": [
+"La Rioja Alta Vina Ardanza Reserva, Rioja"
+],
+"134A": [
+"Vega Sicilia Macan Classico"
+],
+"134B": [
+"Sena"
+],
+"134C": [
+"Bertrand French Cancan Brut Nature"
+],
+"201A": [
+"Mt. Brave Malbec Napa Valley"
+],
+"201B": [
+"Mt. Brave Malbec Napa Valley"
+],
+"202A": [
+"Du Coeur Stony Vine Vineyard Syrah, Rocks District Walla Walla Valle"
+],
+"202B": [
+"Torbreck \"The Struie\" Syrah"
+],
+"203A": [
+"Mariflor Malbec"
+],
+"203B": [
+"Mariflor Malbec"
+],
+"204A": [
+"Pilcrow Ghost Block Cabernet Sauvignon"
+],
+"204B": [
+"Domaine J.L. Chave Selection Hermitage Rouge",
+"J.L. Chave Selection Hermitage Rouge Farconnet"
+],
+"205A": [
+"Jamet 'Cote-Rotie' Syrah"
+],
+"205B": [
+"Sadie Family \"Columella\" Red Blend"
+],
+"206A": [
+"Mollydooker Shiraz Blue Eyed"
+],
+"206B": [
+"Outpost Zinfandel Howell Mountain"
+],
+"207A": [
+"Thierry Allmand Cornas Chaillots"
+],
+"207B": [
+"Outpost True Vineyard Cabernet Sauvignon, Howell Mountain",
+"Outpost 'True Vineyard' Cabernet Sauvignon"
+],
+"210A": [
+"Fortunate Son \"The Warrior\" Cabernet Sauvignon 750ml"
+],
+"210B": [
+"Mayacamas Cabernet (2003-2005)"
+],
+"211A": [
+"Dunn Vineyards \"Napa Valley\" Cabernet Sauvignon"
+],
+"211B": [
+"The Mascot Cabernet Sauvignon"
+],
+"212A": [
+"Opus One"
+],
+"212B": [
+"Fortunate Son \"Red Diplomat\""
+],
+"213A": [
+"Harlan Est Red"
+],
+"213B": [
+"Fortunate Son \"Dreamer\" Cabernet Sauvignon"
+],
+"214A": [
+"Chateau Haut Brion",
+"Chateau Haut Brion 2016"
+],
+"214B": [
+"Cathiard Vineyard Cabernet",
+"Cathiard Vineyard Cabernet Sauvignon"
+],
+"215A": [
+"Vinsur \"Tresparauno\" Sparkling Brut"
+],
+"215B": [
+"Lede Family Rhythm Cab Sauv"
+],
+"216A": [
+"Patz-Hall Chard Sonoma Coast"
+],
+"216B": [
+"Staglin Salus Chardonnay"
+],
+"217A": [
+"Morlet 'Ma Douce' Chardonnay"
+],
+"217B": [
+"Jordan Cabernet Sauvignon"
+],
+"218A": [
+"Leflaive, Domaine Macon Verze"
+],
+"218B": [
+"Drosophilia Blanco"
+],
+"219A": [
+"Boyer Chardonnay"
+],
+"219B": [
+"Matthiasson Napa White"
+],
+"220A": [
+"Rijckaert Bourgogne \"Bien Eleve\" Vieilles Vignes"
+],
+"220B": [
+"Schloss Johannisberg Feinherb Gelblack Riesling",
+"Schloss Johannisberg Gelback 2019"
+],
+"221A": [
+"Du Coeur Chardonnay [Willamette Valley]"
+],
+"221B": [
+"La Chablisienne Chablis La Grenouilles"
+],
+"222A": [
+"Leflaive Puligny Montrachet Chardonnay"
+],
+"222B": [
+"Domaine Michel Niellon 'Les Champs-Gains' Chassagne Montrachet 1er Cru"
+],
+"223A": [
+"Domaine Louis Latour Corton-Charlemagne Grand Cru",
+"Latour Corton Charlemagne 2019"
+],
+"223B": [
+"Peter Michael 'Belle Cote' Chardonnay 750ml"
+],
+"224A": [
+"Remoissent Pernand Vergelesses"
+],
+"224B": [
+"Billaud Simon Chablis"
+],
+"225A": [
+"Villa Sparina Cortese De Gavi"
+],
+"225B": [
+"Mastroberardino Falanghina"
+],
+"226A": [
+"Joh. Jos. Prum Wehlener Sonnenuhr Kabinett",
+"Joh. Jos. Prüm Wehlener Sonnenuhr Riesling Kabinett"
+],
+"226B": [
+"Joh. Jos. Prum Wehlener Sonnenuhr Kabinett",
+"Joh. Jos. Prüm Wehlener Sonnenuhr Riesling Kabinett"
+],
+"227A": [
+"Domaine Roblin 'Enclos de Mainbray' Sancerre",
+"Roblin Sancerre Maimbray 2023"
+],
+"227B": [
+"Massican Gemina"
+],
+"229A": [
+"Vigneti Del Sole"
+],
+"229B": [
+"Jordan Chardonnay"
+],
+"230A": [
+"Parvada Blanco"
+],
+"230B": [
+"Chimney Rock Elevage Blanc"
+],
+"231A": [
+"Chateau St Jean Chardonnay Carneros"
+],
+"231B": [
+"Domaine Ott, Chateau De Selle Rose"
+],
+"232A": [
+"Summer Dreams Sun Also Rises Chard"
+],
+"232B": [
+"Summer Dreams Sun Also Rises Chard"
+],
+"233A": [
+"Morlet 'La Proportion Doree' White Blend"
+],
+"233B": [
+"Morlet 'La Proportion Doree' White Blend"
+],
+"234A": [
+"River Farm Sauvignon Blanc"
+],
+"234B": [
+"River Farm Sauvignon Blanc"
+],
+"235A": [
+"Livio Felluga Pinot Grigio"
+],
+"235B": [
+"Livio Felluga Pinot Grigio"
+],
+"236A": [
+"La Fete Du Rose Cotes De Provence"
+],
+"236B": [
+"IDDA Etna Bianco"
+],
+"300A": [
+"Louis Latour ‘En Caradeux’ Pernand-Vergelesses 1er Cru"
+],
+"300B": [
+"Sea Smoke Ten Pinot Noir"
+],
+"300C": [
+"Heitz C-91"
+],
+"301A": [
+"Chateau Lascombes 2eme Cru Classe",
+"Chateau Lascombes 'Margaux'"
+],
+"302A": [
+"Bisol Jeio Prosecco DOC"
+],
+"302B": [
+"Bisol Jeio Prosecco DOC"
+],
+"302C": [
+"Bisol Jeio Prosecco DOC"
+],
+"303A": [
+"Freixenet Blanc de Blancs Brut"
+],
+"303B": [
+"Freixenet Blanc de Blancs Brut"
+],
+"303C": [
+"Freixenet Blanc de Blancs Brut"
+],
+"304A": [
+"Moet & Chandon Imperial Brut",
+"Moet & Chandon Imperial Rsv"
+],
+"304B": [
+"Moet & Chandon Imperial Brut",
+"Moet & Chandon Imperial Rsv"
+],
+"304C": [
+"Moet & Chandon Imperial Brut",
+"Moet & Chandon Imperial Rsv"
+],
+"305A": [
+"Berlucchi '61' Brut"
+],
+"305B": [
+"Berlucchi '61' Brut"
+],
+"305C": [
+"Berlucchi '61' Brut"
+],
+"306A": [
+"Gradis Ciutta Pinot Grigio"
+],
+"306B": [
+"Gradis Ciutta Pinot Grigio"
+],
+"306C": [
+"Gradis Ciutta Pinot Grigio"
+],
+"307A": [
+"Torres Pazo Bruxas Albarino"
+],
+"307B": [
+"Torres Pazo Bruxas Albarino"
+],
+"307C": [
+"Torres Pazo Bruxas Albarino"
+],
+"308A": [
+"Villebois Touraine Sauvignon Blanc",
+"Villebois Val de Loire Sauvignon Blanc"
+],
+"308B": [
+"Villebois Touraine Sauvignon Blanc",
+"Villebois Val de Loire Sauvignon Blanc"
+],
+"308C": [
+"Villebois Touraine Sauvignon Blanc",
+"Villebois Val de Loire Sauvignon Blanc"
+],
+"309A": [
+"La Fete De Blanc"
+],
+"309B": [
+"La Fete De Blanc"
+],
+"309C": [
+"La Fete De Blanc"
+],
+"310A": [
+"Etude 'Grace Benoist Ranch' Chardonnay"
+],
+"310B": [
+"Etude 'Grace Benoist Ranch' Chardonnay"
+],
+"310C": [
+"Etude 'Grace Benoist Ranch' Chardonnay"
+],
+"311A": [
+"Rumor Cotes De Provence Rose"
+],
+"311B": [
+"Rumor Cotes De Provence Rose"
+],
+"311C": [
+"Rumor Cotes De Provence Rose"
+],
+"312A": [
+"Four Graces Pinot Noir"
+],
+"312B": [
+"Four Graces Pinot Noir"
+],
+"312C": [
+"Four Graces Pinot Noir"
+],
+"313A": [
+"Cune Reserva"
+],
+"313B": [
+"Cune Reserva"
+],
+"313C": [
+"Cune Reserva"
+],
+"314A": [
+"Argiano Non Confunditur"
+],
+"314B": [
+"Argiano Non Confunditur"
+],
+"314C": [
+"Argiano Non Confunditur"
+],
+"315A": [
+"Terrazas Malbec Rsv"
+],
+"315B": [
+"Terrazas Malbec Rsv"
+],
+"315C": [
+"Terrazas Malbec Rsv"
+],
+"316A": [
+"Daou Reserve Cabernet Sauvignon"
+],
+"316B": [
+"Daou Reserve Cabernet Sauvignon"
+],
+"316C": [
+"Daou Reserve Cabernet Sauvignon"
+],
+"317A": [
+"Secret del Priorat",
+"Torres Secret del Priorat"
+],
+"317B": [
+"Secret del Priorat",
+"Torres Secret del Priorat"
+],
+"317C": [
+"Secret del Priorat",
+"Torres Secret del Priorat"
+],
+"318A": [
+"Unsancitoned Pinot Gris",
+"Unsanctioned Pinot Gris"
+],
+"318B": [
+"Unsancitoned Pinot Gris",
+"Unsanctioned Pinot Gris"
+],
+"318C": [
+"Unsancitoned Pinot Gris",
+"Unsanctioned Pinot Gris"
+],
+"319A": [
+"The Curator Reserve Chenin Blanc",
+"The Curator White Blend"
+],
+"319B": [
+"The Curator Reserve Chenin Blanc",
+"The Curator White Blend"
+],
+"319C": [
+"The Curator Reserve Chenin Blanc",
+"The Curator White Blend"
+],
+"320A": [
+"Terres Blondes Gamay De Loire"
+],
+"320B": [
+"Terres Blondes Gamay De Loire"
+],
+"320C": [
+"Terres Blondes Gamay De Loire"
+],
+"321A": [
+"Cotarella Sodale",
+"Familia Cotarella 'Sodale' Merlot Lazio"
+],
+"321B": [
+"Cotarella Sodale",
+"Familia Cotarella 'Sodale' Merlot Lazio"
+],
+"321C": [
+"Cotarella Sodale",
+"Familia Cotarella 'Sodale' Merlot Lazio"
+],
+"322A": [
+"Cascina Bonfante Brachetto D'Acqui"
+],
+"322B": [
+"Niepoort Colheita Port"
+],
+"322C": [
+"Grahams Port Tawny 20YR",
+"Grahams Port Tawny 1997 Single Harvest"
+],
+"323A": [
+"Disznoko 6 Puttonyos Tokaji Aszu 500ml"
+],
+"323B": [
+"Chateau Roumieu 'Sauternes'"
+],
+"323C": [
+"Rare Wine Co. Boston Bual Special Reserve Madeira",
+"Boston Bual"
+],
+"324A": [
+"Armand De Brignac Brut Gold"
+],
+"324B": [
+"Philipponnat Brut Reserve Perpetue",
+"Philipponnat Royale Reserve Brut"
+],
+"324C": [
+"Ruinart Blanc De Blancs",
+"Ruinart Blanc De Blancs Second Skin"
+],
+"325A": [
+"Veuve Clicquot Yellow Label Brut"
+],
+"325B": [
+"Bollinger La Grande Annee"
+],
+"325C": [
+"Perrier Jouet Belle Epoque Brut"
+],
+"326A": [
+"Dom Perignon"
+],
+"326B": [
+"Gaston Chiquet 'Special Club' Brut, Champagne"
+],
+"326C": [
+"Louis Roederer Cristal"
+],
+"327A": [
+"Pol Roger Sir Winston Churchill"
+],
+"327B": [
+"Perrier Jouet Blason Rose Shape"
+],
+"327C": [
+"Armand De Brignac Brut Rose"
+],
+"328A": [
+"J.Lassalle Brut Rose 1er Cru"
+],
+"328B": [
+"Veuve Clicquot Rose NV"
+],
+"328C": [
+"Dom Perignon Rose"
+],
+"329A": [
+"Fantesca Chardonnay"
+],
+"329B": [
+"Lonesome Rock Estate Chardonnay"
+],
+"329C": [
+"PYCM Bourgogne Chardonnay"
+],
+"330A": [
+"PYCM Au Bout du Monde"
+],
+"330B": [
+"PYCM Saint Aubin 1er Cru \"Hommage a Marguerite\""
+],
+"330C": [
+"Domaine Naudet Sancerre"
+],
+"331A": [
+"Browne Family Cabernet Sauvignon"
+],
+"331B": [
+"Emerson Brown Cabernet Sauvignon"
+],
+"331C": [
+"Screaming Eagle \"The Flight\" Red Blend, Oakville"
+],
+"332A": [
+"Coche-Dury Bourgogne Pinot Noir"
+],
+"332B": [
+"Dom Pousse d'Or Corton Clos du Roi Grand Cru Pinot Noir"
+],
+"332C": [
+"Faiveley Mercurey Rg"
+],
+"333A": [
+"Dom Hudelot-Baillet Bonnes Mares Grand Cru"
+],
+"333B": [
+"Domaine Morey - Coffinet Bourgogne Rouge"
+],
+"333C": [
+"Domaine de la Romanée-Conti 'Grands-Échezeaux' Grand Cru",
+"DRC Echezeaux Grand Cru."
+],
+"334A": [
+"Domaine de la Romanée-Conti 'Corton' Grand cru"
+],
+"334B": [
+"DRC La Tache Grand Cru"
+],
+"334C": [
+"Chateau Palmer 'Alter Ego' Margaux"
+],
+"335A": [
+"Chateau Rayas Chateauneuf Du Pape Rouge"
+],
+"335B": [
+"Antinori Solaia"
+],
+"335C": [
+"Poderi Colla Barbaresco Roncaglie"
+],
+"336A": [
+"Penfolds \"Grange Bin 95\" Shiraz"
+],
+"336B": [
+"Dominio de Pingus \"Flor de Pingus\" Ribera del Duero"
+],
+"336C": [
+"Billecart Salmon Brut Rose LARGE FORMAT (1.5L)"
+],
+"337A": [
+"Albert Grivault Meursault 1er Cru Clos des Perrieres"
+],
+"337B": [],
+"337C": [
+"The Curator Reserve Chenin Blanc",
+"The Curator White Blend"
+]
+}
+}
