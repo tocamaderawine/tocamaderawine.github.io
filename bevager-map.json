@@ -1,5 +1,5 @@
 {
-"note": "Which Bevager (Craftable) wine items feed each tower slot, by exact Bevager item name (the leading 'Wine - ' left off). A slot's count is the summed on-hand of every listed item. Built 2026-11-22 from the Bevager item ids in the cellar map. 130C and 337B: their old Bevager items no longer exist, so they have no names yet. 108A (now DuMol Pinot Noir) and 123A (now Lynch-Bages) are empty until those wines are set up in Bevager. 337C (Sena 2009 MAG) was wrongly linked to The Curator items, so it is empty until its own Bevager item is found.",
+"note": "Which Bevager (Craftable) wine items feed each tower slot, by exact Bevager item name (the leading 'Wine - ' left off). A slot's count is the summed on-hand of every listed item. Built 2026-11-22 from the Bevager item ids in the cellar map. 130C: its old Bevager item no longer exists, so it has no name yet. 337B (Ace of Spades Gold MAG) is the Armand De Brignac Brut Gold LARGE FORMAT 1.5L item. 108A (now DuMol Pinot Noir) and 123A (now Lynch-Bages) are empty until those wines are set up in Bevager. 337C (Sena 2009 MAG) was wrongly linked to The Curator items, so it is empty until its own Bevager item is found.",
 "slots": {
 "100A": [
 "Rebholz Riesling Sekt Extra Brut"
@@ -54,7 +54,8 @@
 "Domaine Benoit Chevallier Coteaux Bourguignon"
 ],
 "104C": [
-"Domaine Joseph Roty Gevery Chambertin 'Clos Prieur Bas'"
+"Domaine Joseph Roty Gevery Chambertin 'Clos Prieur Bas'",
+"J Roty Gevrey Clos Prieur Bas"
 ],
 "105A": [
 "Frederic Esmonin Ruchottes-Chambertin Grand Cru"
@@ -771,7 +772,8 @@
 "Dom Perignon"
 ],
 "326B": [
-"Gaston Chiquet 'Special Club' Brut, Champagne"
+"Gaston Chiquet 'Special Club' Brut, Champagne",
+"Gaston Chiquest Special Club"
 ],
 "326C": [
 "Louis Roederer Cristal"
@@ -870,7 +872,9 @@
 "337A": [
 "Albert Grivault Meursault 1er Cru Clos des Perrieres"
 ],
-"337B": [],
+"337B": [
+"Armand De Brignac Brut Gold LARGE FORMAT"
+],
 "337C": []
 }
 }
