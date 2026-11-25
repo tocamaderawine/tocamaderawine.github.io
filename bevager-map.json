@@ -1,5 +1,5 @@
 {
-"note": "Which Bevager (Craftable) wine items feed each tower slot, by exact Bevager item name (the leading 'Wine - ' left off). A slot's count is the summed on-hand of every listed item. Built 2026-11-22 from the Bevager item ids in the cellar map. 130C and 337B: their old Bevager items no longer exist, so they have no names yet. 108A (now DuMol Pinot Noir) and 123A (now Lynch-Bages) are empty until those wines are set up in Bevager.",
+"note": "Which Bevager (Craftable) wine items feed each tower slot, by exact Bevager item name (the leading 'Wine - ' left off). A slot's count is the summed on-hand of every listed item. Built 2026-11-22 from the Bevager item ids in the cellar map. 130C and 337B: their old Bevager items no longer exist, so they have no names yet. 108A (now DuMol Pinot Noir) and 123A (now Lynch-Bages) are empty until those wines are set up in Bevager. 337C (Sena 2009 MAG) was wrongly linked to The Curator items, so it is empty until its own Bevager item is found.",
 "slots": {
 "100A": [
 "Rebholz Riesling Sekt Extra Brut"
@@ -871,9 +871,6 @@
 "Albert Grivault Meursault 1er Cru Clos des Perrieres"
 ],
 "337B": [],
-"337C": [
-"The Curator Reserve Chenin Blanc",
-"The Curator White Blend"
-]
+"337C": []
 }
 }
