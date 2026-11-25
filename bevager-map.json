@@ -1,5 +1,5 @@
 {
-"note": "Which Bevager (Craftable) wine items feed each tower slot, by exact Bevager item name (the leading 'Wine - ' left off). A slot's count is the summed on-hand of every listed item. Built 2026-11-22 from the Bevager item ids in the cellar map. 130C and 337B: their old Bevager items no longer exist, so they have no names yet.",
+"note": "Which Bevager (Craftable) wine items feed each tower slot, by exact Bevager item name (the leading 'Wine - ' left off). A slot's count is the summed on-hand of every listed item. Built 2026-11-22 from the Bevager item ids in the cellar map. 130C and 337B: their old Bevager items no longer exist, so they have no names yet. 108A (now DuMol Pinot Noir) and 123A (now Lynch-Bages) are empty until those wines are set up in Bevager.",
 "slots": {
 "100A": [
 "Rebholz Riesling Sekt Extra Brut"
@@ -66,9 +66,7 @@
 "Anne-Sophie Dubois Fleurie les Cocottes",
 "Anne-Sophie Dubois Fleurie les Cocottes 2024"
 ],
-"108A": [
-"George Wine Co Ceremonial Pinot Noir"
-],
+"108A": [],
 "108B": [
 "Illahe Bon Sauvage Pinot Noir",
 "Illahe Bon Sauvage Pinot Noir 2022 750ml"
@@ -211,10 +209,7 @@
 "122C": [
 "Chateau de Pez, 2nd Pez Saint Estephe"
 ],
-"123A": [
-"Chateau Pontet-Canet Pauillac '5em Grand Cru Classe'; Bordeaux, France",
-"Pontet Canet Pauillac"
-],
+"123A": [],
 "123B": [
 "Penfolds \"Bin 389\" Cab Shiraz"
 ],

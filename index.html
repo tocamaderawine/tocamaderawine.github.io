@@ -542,7 +542,7 @@ function fillOf(id){ const r=shelfRec(id); return r&&r.f?r.f:null; }
 function applySync(y,countsOnly){
   if(!y||!y.items||!(y.t>(S.syncT||0))) return false;
   for(const id in y.items){ const s=S.slots[id], it=y.items[id]; if(!s||!it) continue;
-    if(it.n!=null&&!countsOnly) s.n=it.n; if("c" in it&&!(countsOnly&&s.ct>y.t)){ s.c=(it.c==null?null:it.c); s.ct=y.t; }
+    if(it.n!=null) s.n=it.n; if("c" in it&&!(countsOnly&&s.ct>y.t)){ s.c=(it.c==null?null:it.c); s.ct=y.t; }
     if("p" in it&&!countsOnly) s.p=it.p;
     if("w" in it){ if(it.w) s.w=it.w; else delete s.w; } if("vt" in it){ if(it.vt) s.vt=it.vt; else delete s.vt; } }
   if(y.clearLogBefore) S.log=S.log.filter(e=>e.t>=y.clearLogBefore);
