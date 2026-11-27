@@ -282,6 +282,8 @@ body.offline .livestat i{background:var(--low)}
 /* Manage */
 .acct{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:14px 0 0;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:14px}
 .acct span{font-size:14px;color:var(--muted)}
+.acct .abtns{display:flex;gap:8px;flex:none}
+#alertrow{flex-wrap:wrap}
 #acctp{background:var(--panel);border:1px solid var(--accent);border-radius:14px;padding:14px;margin-top:10px}
 #acctp label{display:block;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:10px 0 4px}
 #acctp input{width:100%;background:var(--bg);border:1px solid var(--line-2);border-radius:10px;padding:11px 12px;font-size:16px}
@@ -362,6 +364,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   <div class="ph2"><div><h2>Manage</h2><p>Counts, usage and tap review.</p></div></div>
   <div class="acct" id="acctrow" hidden><span id="whoami">Managers sign in to edit and review.</span><button id="acct" class="btn">Sign in</button></div>
   <div id="acctp" hidden></div>
+  <div class="acct" id="alertrow" hidden><span id="alertmsg"></span><div class="abtns" id="alertbtns"></div></div>
   <div class="seg subseg" id="mseg" role="tablist" aria-label="Manage"><button role="tab" data-ms="sheet" aria-selected="true">Count</button><button role="tab" data-ms="usage" aria-selected="false">Usage</button><button role="tab" data-ms="review" id="revtab" aria-selected="false" hidden>Review</button></div>
   <div class="sub on" id="v-sheet"></div>
   <div class="sub" id="v-usage"></div>
@@ -542,14 +545,17 @@ function status(id){ const s=slot(id); if(!s.n) return "empty"; const c=onHand(i
    Building count = last Bevager/editor count minus taps since then. Slot count = last count set on the slot minus taps since then. */
 let TAPS={};
 let TAPE={};
-function indexTaps(){ TAPS={}; TAPE={}; for(const e of S.log) if(e&&e.src==="tap"&&e.id){ (TAPS[e.id]=TAPS[e.id]||[]).push(e.t); (TAPE[e.id]=TAPE[e.id]||[]).push(e); } }
-function tapsSince(id,t){ const a=TAPS[id]; if(!a) return 0; let n=0; for(const x of a) if(x>t) n++; return n; }
+function indexTaps(){ TAPS={}; TAPE={}; for(const e of S.log){ if(!e||!e.id) continue;
+    if(e.src==="tap"){ (TAPS[e.id]=TAPS[e.id]||[]).push({t:e.t,a:1,whole:true}); (TAPE[e.id]=TAPE[e.id]||[]).push(e); }
+    else if(e.src==="toast"&&e.d<0) (TAPS[e.id]=TAPS[e.id]||[]).push({t:e.t,a:-e.d,whole:!e.oz}); } }
+// Taps and Toast sales since t. wholeOnly leaves out glasses: a pour comes off the building count, not the bottles in the slot.
+function tapsSince(id,t,wholeOnly){ const a=TAPS[id]; if(!a) return 0; let n=0; for(const x of a) if(x.t>t&&(!wholeOnly||x.whole)) n+=x.a; return Math.round(n*1000)/1000; }
 function countT(id){ const s=slot(id); return s.ct||S.syncT||0; }
 function onHand(id){ const s=slot(id); if(s.c==null) return null; if(!LIVE) return s.c; const t=countT(id), used=sibs(id).reduce((a,k)=>a+tapsSince(k,t),0); return Math.max(0,Math.round((s.c-used)*100)/100); }
-function takenSince(id){ const t=countT(id); return sibs(id).reduce((a,k)=>a+tapsSince(k,t),0); }
+function takenSince(id){ const t=countT(id); return Math.round(sibs(id).reduce((a,k)=>a+tapsSince(k,t),0)*100)/100; }
 const shelf={box:{v:null},opt:{}};
 function shelfRec(id){ if(id in shelf.opt) return shelf.opt[id]; const v=shelf.box.v; return v&&v[id]&&typeof v[id]==="object"?v[id]:null; }
-function here(id){ if(!LIVE) return null; const r=shelfRec(id); if(!r||r.h==null) return null; return Math.max(0,r.h-tapsSince(id,r.t||0)); }
+function here(id){ if(!LIVE) return null; const r=shelfRec(id); if(!r||r.h==null) return null; return Math.max(0,Math.floor(r.h-tapsSince(id,r.t||0,true)+1e-9)); }
 function fillOf(id){ const r=shelfRec(id); return r&&r.f?r.f:null; }
 let ORIGW=null; // the wine each slot held on the original slot sheet; a Bevager count for a slot belongs to that wine
 function origW(id){ if(!ORIGW){ ORIGW={}; const o=defaultState(); if(window.SEED) for(const k in SEED.items){ const it=SEED.items[k]; if(o.slots[k]&&it&&it.w) o.slots[k].w=it.w; } for(const k in o.slots) if(o.slots[k].w) ORIGW[k]=o.slots[k].w; } return ORIGW[id]; }
@@ -603,7 +609,7 @@ function staffCopy(label){ // no shared store here: show the baked-in audit snap
   S=defaultState(); if(window.SEED) applySync(window.SEED); if(window.COUNTS) applySync(window.COUNTS); readOnly=true; document.body.classList.add("solo"); renderAll(); setSync(label);
 }
 async function initStore(){
-  if(STANDALONE){ if(LIVE) fbInit(); else staffCopy("Staff copy"); if(location.protocol==="https:"&&"serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{}); return; }
+  if(STANDALONE){ if(LIVE) fbInit(); else staffCopy("Staff copy"); if(location.protocol==="https:"&&"serviceWorker" in navigator){ navigator.serviceWorker.register("sw.js").catch(()=>{}); if(LIVE) navigator.serviceWorker.ready.then(r=>{ AL.reg=r; alLoad(); }); } return; }
   loadLocal(); if(window.SEED&&applySync(window.SEED)) saveLocal(); renderAll();
   setSync("Saved on this device");
   let ns=null;
@@ -712,7 +718,7 @@ function fbAdopt(){ // rebuild what's on screen from the shared copy, keeping an
   for(const id of fb.dirty.keys()) if(S.slots[id]&&n.slots[id]) n.slots[id]=S.slots[id];
   S=n; fbLogBuild();
   if(applyBTG(S)&&fbCan()){ S.rev=Date.now(); fbMark(null); }
-  if(window.COUNTS&&window.COUNTS.t>(S.syncT||0)&&applySync(window.COUNTS,true)&&fbCan()){ S.rev=Date.now(); fbMark(null); }
+  if(window.COUNTS&&window.COUNTS.t>(S.syncT||0)){ const before=fbCan()?wineSnap():null; if(applySync(window.COUNTS,true)&&fbCan()){ S.rev=Date.now(); bevDrops(before,window.COUNTS); fbMark(null); } }
   if(!S.slots[sel]) sel=slotList()[0].id;
   renderAll(true);
 }
@@ -743,6 +749,12 @@ async function fbFlush(){
     fb.fails++; fbStatus("Not saved yet. Retrying…"); clearTimeout(fb.timer); fb.timer=setTimeout(fbFlush,Math.min(15000,1500*fb.fails));
   }
 }
+function wineSnap(){ const m={}; for(const x of slotList()){ const s=S.slots[x.id]; if(!s||!s.n) continue; const k=s.w||x.id; if(!(k in m)) m[k]={id:x.id,on:onHand(x.id),c:s.c,ct:s.ct}; } return m; }
+function bevDrops(before,y){ if(!before) return; const after=wineSnap(), now=Date.now(); let i=0;
+  for(const k in after){ const b=before[k], a=after[k]; if(!b||b.on==null||a.on==null||a.on>=b.on-0.005) continue;
+    const ev={t:now,id:a.id,n:slot(a.id).n,d:Math.round((a.on-b.on)*100)/100,src:"bev",from:b.on,to:a.on,au:String(y.audit||"").slice(0,30)}; if(b.c!=null) ev.pc=b.c; if(b.ct) ev.pct=b.ct;
+    const key=now+"-b"+(i++)+Math.random().toString(36).slice(2,6); fb.pend[key]=ev; fb.logQ.push([key,ev]); }
+  fbLogBuild(); }
 function fbLog(id,d){ const ev={t:Date.now(),id,n:slot(id).n,d}, k=ev.t+"-"+Math.random().toString(36).slice(2,8); fb.pend[k]=ev; fb.logQ.push([k,ev]); fbLogBuild(); }
 function fbStream(path,q,box,onData){
   let es; try{ es=new EventSource(fbUrl(path,"",q)); }catch(e){ return; }
@@ -755,7 +767,7 @@ function fbStream(path,q,box,onData){
 /* ---------- bottles to pull, from Toast orders ---------- */
 const pulls={box:{v:null},opt:{},seen:null,sound:false,ctx:null};
 try{ pulls.sound=localStorage.getItem(LS+"-sound")==="1"; }catch(e){}
-function pullList(){ const out=[]; const v=pulls.box.v||{}; for(const id in v){ const p=v[id]; if(!p||typeof p!=="object"||p.void) continue; const o=Object.assign({id},p); if(id in pulls.opt) o.got=pulls.opt[id]; out.push(o); } return out; }
+function pullList(){ const out=[]; const v=pulls.box.v||{}; for(const id in v){ const p=v[id]; if(!p||typeof p!=="object"||p.void||p.pour) continue; const o=Object.assign({id},p); if(id in pulls.opt) o.got=pulls.opt[id]; out.push(o); } return out; }
 function ago(t){ const m=Math.max(0,Math.round((Date.now()-t)/60000)); return m<1?"just now":m<60?m+" min ago":Math.floor(m/60)+" hr "+(m%60)+" min ago"; }
 function pullSlots(p){ return (Array.isArray(p.slots)?p.slots:Object.values(p.slots||{})).filter(x=>S.slots[x]); }
 function beep(){ try{ const c=pulls.ctx||(pulls.ctx=new (window.AudioContext||window.webkitAudioContext)()); const o=c.createOscillator(), g=c.createGain(); o.type="sine"; o.frequency.value=880; g.gain.setValueAtTime(.0001,c.currentTime); g.gain.exponentialRampToValueAtTime(.3,c.currentTime+.02); g.gain.exponentialRampToValueAtTime(.0001,c.currentTime+.45); o.connect(g); g.connect(c.destination); o.start(); o.stop(c.currentTime+.5); }catch(e){} }
@@ -793,6 +805,66 @@ document.getElementById("pulls").addEventListener("click",e=>{
   if(go&&S.slots[go.dataset.goto]) openSlot(go.dataset.goto);
 });
 setInterval(()=>{ if(!document.getElementById("pulls").hidden) renderPulls(); },30000);
+/* ---------- phone alerts: the Toast relay sends a lock-screen notification for every bottle rung in.
+   This phone signs up with the relay (address and public key come from toast/status); sw.js shows the alert. ---------- */
+const AL={st:null,reg:null,sub:null,busy:false};
+const IOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+const HOME=(window.matchMedia&&matchMedia("(display-mode: standalone)").matches)||navigator.standalone===true;
+function alB64u(buf){ let s=""; for(const b of new Uint8Array(buf)) s+=String.fromCharCode(b); return btoa(s).replace(/=+$/,"").replace(/\+/g,"-").replace(/\//g,"_"); }
+function alBytes(s){ s=String(s).replace(/-/g,"+").replace(/_/g,"/"); while(s.length%4) s+="="; const b=atob(s), a=new Uint8Array(b.length); for(let i=0;i<b.length;i++) a[i]=b.charCodeAt(i); return a; }
+function alDev(){ const u=navigator.userAgent; return /iPhone/.test(u)?"iPhone":IOS?"iPad":/Android/.test(u)?"Android":/Mac/.test(u)?"Mac":/Windows/.test(u)?"PC":"device"; }
+async function alLoad(){
+  try{ const r=await fetch(fbUrl("toast/status"),{cache:"no-store"}); if(r.ok) AL.st=await r.json(); }catch(e){}
+  try{ if(AL.reg&&AL.reg.pushManager) AL.sub=await AL.reg.pushManager.getSubscription(); }catch(e){ AL.sub=null; }
+  if(AL.sub&&AL.st&&AL.st.relay&&AL.st.vapid){ // stay signed up: re-subscribe if the relay's key changed, and check in twice a day
+    let key=""; try{ key=alB64u(AL.sub.options.applicationServerKey); }catch(e){}
+    if(key&&key!==AL.st.vapid&&window.Notification&&Notification.permission==="granted"){ try{ await AL.sub.unsubscribe(); AL.sub=await AL.reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:alBytes(AL.st.vapid)}); try{ localStorage.removeItem(LS+"-alsent"); }catch(x){} }catch(e){ AL.sub=null; } }
+    let last=0; try{ last=+localStorage.getItem(LS+"-alsent")||0; }catch(e){}
+    if(AL.sub&&Date.now()-last>12*3600000) alSend("sub").catch(()=>{});
+  }
+  renderAlerts();
+}
+async function alSend(what){
+  const r=await fetch(AL.st.relay+"/push/"+what,{method:"POST",headers:{"Content-Type":"text/plain"},body:JSON.stringify(what==="sub"?{sub:AL.sub.toJSON(),dev:alDev()}:{endpoint:AL.sub.endpoint})});
+  const j=await r.json().catch(()=>({})); if(!r.ok) throw j;
+  if(what==="sub") try{ localStorage.setItem(LS+"-alsent",String(Date.now())); }catch(e){}
+  return j;
+}
+function renderAlerts(){
+  const row=document.getElementById("alertrow"); if(!row||!LIVE) return; row.hidden=false;
+  const ready=!!(AL.st&&AL.st.relay&&AL.st.vapid), can=!!(AL.reg&&AL.reg.pushManager&&window.Notification); let t="", b="";
+  if(AL.sub){ t="Bottle alerts are on for this "+alDev()+"."; b=`<button class="btn" data-al="test">Send test</button><button class="btn" data-al="off">Turn off</button>`; }
+  else if(IOS&&!HOME) t="To get bottle alerts on iPhone: tap Share, then Add to Home Screen. Open Wine Tower from your home screen and turn alerts on here.";
+  else if(!can) t="This browser can't show alerts. Use Safari on iPhone (from the home screen) or Chrome on Android.";
+  else if(Notification.permission==="denied") t="Alerts are blocked for Wine Tower. Allow them in this phone's Settings > Notifications, then come back here.";
+  else if(!ready) t="Lock-screen alerts for bottle orders start once Toast is connected.";
+  else { t="Get a lock-screen alert when a bottle is ordered on Toast."; b=`<button class="btn" data-al="on">Turn on alerts</button>`; }
+  if(AL.busy) b=b.replace(/<button /g,"<button disabled ");
+  document.getElementById("alertmsg").textContent=t; document.getElementById("alertbtns").innerHTML=b;
+}
+document.getElementById("alertbtns").addEventListener("click",async e=>{
+  const k=e.target.closest("[data-al]"); if(!k||AL.busy) return; const a=k.dataset.al;
+  if(a==="on"){ // subscribe first, inside the tap, so iPhone allows the permission prompt
+    let sub=null; AL.busy=true; renderAlerts();
+    try{ sub=await AL.reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:alBytes(AL.st.vapid)}); }
+    catch(x){ AL.busy=false; renderAlerts(); if(window.Notification&&Notification.permission!=="denied") showToast("Couldn't turn on alerts. Try again.",null,true); return; }
+    AL.sub=sub;
+    try{ await alSend("sub"); showToast("Alerts on. A test is on its way."); alSend("test").catch(()=>{}); }
+    catch(x){ try{ await sub.unsubscribe(); }catch(y){} AL.sub=null; showToast("Couldn't reach the Toast relay. Check the connection and try again.",null,true); }
+    AL.busy=false; renderAlerts(); return;
+  }
+  AL.busy=true; renderAlerts();
+  try{
+    if(a==="test"){ const j=await alSend("test"); showToast(j&&j.ok?"Test sent. It should show in a few seconds.":"The test didn't go through. Turn alerts off and on again.",null,!(j&&j.ok)); }
+    if(a==="off"){ await alSend("unsub").catch(()=>{}); try{ await AL.sub.unsubscribe(); }catch(y){} AL.sub=null; showToast("Alerts off for this "+alDev()+"."); }
+  }catch(x){ showToast(x&&x.error==="wait a few seconds"?"Give it a few seconds between tests.":"Couldn't reach the Toast relay. Check the connection and try again.",null,true); }
+  AL.busy=false; renderAlerts();
+});
+// tapping an alert opens the tower at that slot
+const PULLGO=(()=>{ try{ const q=new URLSearchParams(location.search).get("pull"); if(q) history.replaceState(null,"",location.pathname); return q; }catch(e){ return null; } })();
+let pullGone=false;
+function goPull(id){ if(!S.slots[id]) return; if(CARD) closeSheet(); showView("tower"); openSlot(id); }
+if("serviceWorker" in navigator) navigator.serviceWorker.addEventListener("message",e=>{ const d=e.data; if(d&&d.pull) goPull(String(d.pull)); });
 /* ---------- manager review of taps: taps count right away; managers approve or reject; after 24 hours they approve themselves ---------- */
 const REV={box:{v:null},opt:{},loaded:false,pruned:false};
 const DAY=864e5;
@@ -810,19 +882,24 @@ function tapFlags(e){
 function reviewList(){
   if(!LIVE||!fbCan()) return [];
   const now=Date.now(), out=[];
-  for(const e of S.log){ if(!e||e.src!=="tap"||!e._k||e.t<now-DAY||approvedAt(e._k)) continue; out.push(Object.assign({},e,{why:tapFlags(e)})); }
+  for(const e of S.log){ if(!e||!(e.src==="tap"||e.src==="toast"||e.src==="bev")||!e._k||e.t<now-DAY||approvedAt(e._k)) continue; out.push(Object.assign({},e,{why:e.src==="tap"?tapFlags(e):[]})); }
   return out.sort((a,b)=>(b.why.length?1:0)-(a.why.length?1:0)||b.t-a.t);
 }
+function btl(v){ v=Math.round(v*100)/100; return v+(v===1?" bottle":" bottles"); }
+function revWhat(e){
+  if(e.src==="toast") return "Toast: "+(e.oz?(e.q||1)+(e.q>1?" glasses":" glass")+" ("+e.oz+" oz), "+btl(-e.d):(e.q||1)+(e.q>1?" bottles":" bottle")+" sold")+(e.n&&cnorm(e.n)!==cnorm(slot(e.id).n)?" · "+e.n:"")+(e.chk?" · check "+e.chk:"")+(e.tbl?" · "+e.tbl:"");
+  if(e.src==="bev") return "Bevager audit"+(e.au?" "+e.au:"")+": "+e.from+" down to "+e.to;
+  return "Took one"; }
 function whenTxt(t){ const d=new Date(t), today=new Date().toDateString()===d.toDateString(); return (today?"Today ":d.toLocaleDateString(undefined,{weekday:"short"})+" ")+d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}); }
 function renderReview(){
   const can=LIVE&&fbCan(), tab=document.getElementById("revtab"), el=document.getElementById("v-review");
   tab.hidden=!can; if(!can){ el.innerHTML=""; if(MSEG==="review"){ MSEG="sheet"; showSub(); } return; }
   const list=reviewList(), flagged=list.filter(x=>x.why.length).length;
   tab.textContent=list.length?"Review · "+list.length:"Review";
-  let h=`<div class="toolbar">${list.length?`<button class="btn" id="apall" style="border-color:var(--ok);color:var(--ok)">Approve all ${list.length}</button>`:""}<span class="note" style="margin:0">Taps count as soon as they happen. Reject one to take it back out. Anything left here for 24 hours approves itself.</span></div>`;
-  if(!list.length) h+=`<p class="empty">Nothing to review. Every tap from the last 24 hours is approved.</p>`;
+  let h=`<div class="toolbar">${list.length?`<button class="btn" id="apall" style="border-color:var(--ok);color:var(--ok)">Approve all ${list.length}</button>`:""}<span class="note" style="margin:0">Taps, Toast sales and Bevager audit drops count as soon as they happen. Reject one to undo it. Anything left here for 24 hours approves itself.</span></div>`;
+  if(!list.length) h+=`<p class="empty">Nothing to review. Everything from the last 24 hours is approved.</p>`;
   else{ if(flagged) h+=`<p class="note" style="color:var(--out);margin:0 0 6px">${flagged} worth a look. They're at the top.</p>`;
-    h+=list.map(e=>`<div class="rv${e.why.length?" flag":""}"><button class="ri" data-slot="${esc(e.id)}"><span><span class="rcode">${esc(e.id)}</span> <b>${esc(e.n||slot(e.id).n||"")}</b></span>${e.why.map(w=>`<span class="why">${esc(w)}</span>`).join("")}<small>Took one · ${esc(whenTxt(e.t))} · ${esc(phoneTag(e.dv))}${fb.pend[e._k]?" · saving":""}</small></button>
+    h+=list.map(e=>`<div class="rv${e.why.length?" flag":""}"><button class="ri" data-slot="${esc(e.id)}"><span><span class="rcode">${esc(e.id)}</span> <b>${esc(e.n||slot(e.id).n||"")}</b></span>${e.why.map(w=>`<span class="why">${esc(w)}</span>`).join("")}<small>${esc(revWhat(e))} · ${esc(whenTxt(e.t))}${e.src==="tap"?" · "+esc(phoneTag(e.dv)):""}${fb.pend[e._k]?" · saving":""}</small></button>
       <button class="ok" data-ok="${esc(e._k)}" aria-label="Approve">OK</button><button class="no" data-no="${esc(e._k)}" aria-label="Reject">Reject</button></div>`).join(""); }
   const now=Date.now(), rc=Object.entries(shelf.box.v||{}).filter(([id,r])=>r&&r.t>now-DAY&&slot(id).n).sort((a,b)=>b[1].t-a[1].t);
   if(rc.length) h+=`<div class="rvh">Counts set in the last 24 hours</div>`+rc.map(([id,r])=>`<div class="rv"><button class="ri" data-slot="${esc(id)}"><span><span class="rcode">${esc(id)}</span> <b>${esc(slot(id).n)}</b></span><small>Set to ${r.h==null?"?":r.h}${r.f?" (full is "+r.f+")":""} · ${esc(whenTxt(r.t))} · ${esc(phoneTag(r.d))}</small></button></div>`).join("");
@@ -838,10 +915,11 @@ async function approve(keys){
 }
 async function reject(k){
   const e=S.log.find(x=>x._k===k); if(!e) return; const ev=Object.assign({},e); delete ev._k;
+  if(e.src==="bev"){ const g=sibs(e.id); g.forEach(id=>{ const s=S.slots[id]; if(!s) return; s.c=(e.pc==null?null:e.pc); if(e.pct) s.ct=e.pct; else delete s.ct; }); touch(g); }
   tap.gone.add(k); delete fb.pend[k]; if(fb.logs.v) delete fb.logs.v[k]; fbLogBuild(); renderAll(true);
   try{ await fbReq("DELETE","tower/log/"+k,undefined,true); }
   catch(x){ tap.gone.delete(k); if(fb.logs.v) fb.logs.v[k]=ev; fbLogBuild(); renderAll(true); showToast("Not saved. Check the connection and try again.",null,true); return; }
-  showToast("Rejected "+e.id+" "+(e.n||"")+". It's back in the counts.",async()=>{ tap.gone.delete(k); if(fb.logs.v) fb.logs.v[k]=ev; fbLogBuild(); renderAll(true); try{ await fbReq("PUT","tower/log/"+k,ev,true); }catch(x){ showToast("Not saved. Check the connection and try again.",null,true); } });
+  showToast(e.src==="bev"?"Rejected the audit drop for "+e.id+". Back to "+e.from+".":"Rejected "+e.id+" "+(e.n||"")+". It's back in the counts.",e.src==="bev"?null:async()=>{ tap.gone.delete(k); if(fb.logs.v) fb.logs.v[k]=ev; fbLogBuild(); renderAll(true); try{ await fbReq("PUT","tower/log/"+k,ev,true); }catch(x){ showToast("Not saved. Check the connection and try again.",null,true); } });
 }
 document.getElementById("v-review").addEventListener("click",e=>{
   const ok=e.target.closest("[data-ok]"), no=e.target.closest("[data-no]"), all=e.target.closest("#apall"), go=e.target.closest("[data-slot]");
@@ -891,13 +969,13 @@ function setFill(id,f){
 }
 function fbInit(){
   staffCopy("Connecting…"); document.body.classList.remove("solo"); document.body.classList.add("live");
-  fbStream("tower/state","",fb.state,()=>{ fb.got=true; fbAdopt(); });
+  fbStream("tower/state","",fb.state,()=>{ fb.got=true; fbAdopt(); if(PULLGO&&!pullGone){ pullGone=true; goPull(PULLGO); } });
   fbStream("pulls","orderBy=%22t%22&limitToLast=200",pulls.box,()=>{ if(fb.got) renderPulls(); });
   fbStream("tower/log","orderBy=%22%24key%22&limitToLast=2000",fb.logs,()=>{ for(const k in fb.pend) if(fb.logs.v&&fb.logs.v[k]) delete fb.pend[k]; for(const k of tap.gone) if(fb.logs.v) delete fb.logs.v[k]; fbLogBuild(); if(fb.got) soon(); });
   fbStream("shelf","",shelf.box,()=>{ if(fb.got) soon(); });
   fbStream("tower/ok","",REV.box,()=>{ REV.loaded=true; if(fb.got) soon(); });
   try{ const s=JSON.parse(localStorage.getItem(LS+"-fb")||"null"); if(s&&s.rt&&s.uid){ fb.user=s; fb.role="pending"; fbRole(); } }catch(e){}
-  renderAcct();
+  renderAcct(); renderAlerts();
 }
 let acctOpen=false, acctMsg="";
 function renderAcct(){
@@ -1338,11 +1416,11 @@ function renderSummary(){
   let h="";
   if(LIVE) h+=`<button class="pill2${br?"":" quiet"}" data-go="up"><i style="background:${br?"var(--low)":"#5E5752"}"></i>${br?br+(br===1?" slot to fill":" slots to fill"):"No slots to fill"}</button>`;
   h+=`<button class="pill2${re?"":" quiet"}" data-go="re"><i style="background:${re?"var(--out)":"#5E5752"}"></i>${re?re+" to reorder":"Nothing to reorder"}</button>`;
-  if(can) h+=`<button class="pill2${rv?"":" quiet"}" data-go="rv"><i style="background:${rv?"var(--accent)":"#5E5752"}"></i>${rv?rv+(rv===1?" tap to review":" taps to review"):"Taps all reviewed"}</button>`;
+  if(can) h+=`<button class="pill2${rv?"":" quiet"}" data-go="rv"><i style="background:${rv?"var(--accent)":"#5E5752"}"></i>${rv?rv+" to review":"All reviewed"}</button>`;
   document.getElementById("pills").innerHTML=h;
   const bR=document.getElementById("bRestock"), nR=LIVE?br:re; bR.hidden=!nR; bR.textContent=nR; bR.style.background=LIVE?"var(--low)":"var(--out)";
   const bM=document.getElementById("bManage"); bM.hidden=!rv; bM.textContent=rv; bM.style.background="var(--accent)";
-  document.getElementById("src").textContent=LIVE?((S.sync&&S.sync.audit?"Building counts are the Bevager audit from "+String(S.sync.audit).split(",")[0]+", minus bottles tapped out since.":"Building counts minus bottles tapped out.")+" Updates live."):(S.sync?("Counts from "+S.sync.src+" "+S.sync.audit+"."):"");
+  document.getElementById("src").textContent=LIVE?((S.sync&&S.sync.audit?"Building counts are the Bevager audit from "+String(S.sync.audit).split(",")[0]+", minus taps and Toast sales since.":"Building counts minus taps and Toast sales.")+" Updates live."):(S.sync?("Counts from "+S.sync.src+" "+S.sync.audit+"."):"");
 }
 document.getElementById("pills").onclick=e=>{ const b=e.target.closest("[data-go]"); if(!b) return; const g=b.dataset.go;
   if(g==="up"||g==="re"){ RSEG=g; showView("restock"); } else if(g==="rv") showView("review"); };
@@ -1367,7 +1445,7 @@ function shelfHtml(id){
       <div class="pfoot"><span>A full slot holds</span><span class="fstep"><button id="fminus" aria-label="Holds fewer">−</button><span>${f||"?"}</span><button id="fplus" aria-label="Holds more">+</button></span></div></div>`; }
   return `<div class="cnt ${cls}"><div class="cn"><b>${h==null?"?":h}</b><span>${h==null?"in this slot · not counted yet":(f?"of "+f+" in this slot":"in this slot")}</span></div>
     ${h!=null&&f?`<div class="cbar"><i style="width:${Math.min(100,Math.round(h/f*100))}%"></i></div>`:""}
-    <p class="bld">${oh==null?"Building count not known yet.":`Whole building <b>${oh}</b>`}${oh!=null&&aud?` · Bevager audit ${esc(aud)}`:""}${oh!=null&&used?` · ${used} tapped out since`:""}</p></div>
+    <p class="bld">${oh==null?"Building count not known yet.":`Whole building <b>${oh}</b>`}${oh!=null&&aud?` · Bevager audit ${esc(aud)}`:""}${oh!=null&&used?` · ${used} out since`:""}</p></div>
     <div class="acts"><button class="took" id="took">Took one</button>${PICK===id?pick:`<button class="rst" id="rst">${h==null?"Count this slot":"Restocked or recount"}</button>`}</div>`;
 }
 function renderDetail(keepFocus){
@@ -1483,7 +1561,7 @@ function renderRestock(){
 document.getElementById("v-restock").addEventListener("click",e=>{ const s=e.target.closest("[data-rs]"); if(s){ RSEG=s.dataset.rs; renderRestock(); return; } const b=e.target.closest("[data-slot]"); if(b&&S.slots[b.dataset.slot]) openSlot(b.dataset.slot); });
 function renderUsage(){
   const since=Date.now()-usageDays*864e5, by={};
-  for(const ev of S.log){ if(ev.d>=0||ev.t<since) continue; const k=(ev.n||ev.id).toLowerCase(); (by[k]=by[k]||{n:ev.n||ev.id,q:0,last:0}); by[k].q+=-ev.d; by[k].last=Math.max(by[k].last,ev.t); }
+  for(const ev of S.log){ if(ev.d>=0||ev.t<since||ev.src==="bev") continue; const nm=(ev.src==="toast"&&slot(ev.id).n)||ev.n||ev.id, k=nm.toLowerCase(); (by[k]=by[k]||{n:nm,q:0,last:0}); by[k].q=Math.round((by[k].q-ev.d)*100)/100; by[k].last=Math.max(by[k].last,ev.t); }
   const rows=Object.values(by).sort((a,b)=>b.q-a.q), max=rows.length?rows[0].q:1, total=rows.reduce((a,r)=>a+r.q,0);
   let h=`<div class="toolbar"><div class="seg">${[7,30,90].map(d=>`<button data-d="${d}" aria-pressed="${d===usageDays}">${d} days</button>`).join("")}</div><span class="note" style="margin:0">${total} bottles pulled</span></div>`;
   if(!rows.length) h+=`<p class="empty">No bottles pulled in this window. Every Took one tap is logged here.</p>`;
@@ -1510,7 +1588,7 @@ let MSEG="sheet";
 function showSub(){ document.querySelectorAll("#mseg button").forEach(b=>b.setAttribute("aria-selected",b.dataset.ms===MSEG)); ["sheet","usage","review"].forEach(k=>document.getElementById("v-"+k).classList.toggle("on",k===MSEG)); }
 function showView(v){ if(v==="sheet"||v==="usage"||v==="review"){ MSEG=v; showSub(); v="manage"; }
   document.querySelectorAll("#nav button").forEach(b=>b.setAttribute("aria-selected",b.dataset.v===v)); document.querySelectorAll(".view").forEach(s=>s.classList.toggle("on",s.id==="v-"+v));
-  if(v==="tower") resize(); else window.scrollTo(0,0); if(v==="restock") renderRestock(); }
+  if(v==="tower") resize(); else window.scrollTo(0,0); if(v==="restock") renderRestock(); if(v==="manage"&&LIVE&&AL.reg) alLoad(); }
 document.getElementById("nav").onclick=e=>{ const b=e.target.closest("button[data-v]"); if(b){ if(CARD) closeSheet(); showView(b.dataset.v); } };
 document.getElementById("mseg").onclick=e=>{ const b=e.target.closest("button[data-ms]"); if(b){ MSEG=b.dataset.ms; showSub(); } };
 let searchT=null;

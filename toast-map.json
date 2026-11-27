@@ -1,7 +1,10 @@
 {
  "version": 1,
- "note": "Toast menu item GUID -> tower slot(s). Built from the Toast wine menu. Bottles only.",
+ "note": "Toast menu item GUID (items) or normalized item name (names) -> tower slot(s). Built from the Toast wine menu. A bottle shows as a pull and comes off the count; a glass comes off the count by its pour. An entry can say \"kind\": \"glass\" or \"bottle\" and \"oz\" for its pour; otherwise item and modifier names decide (\"5 oz\", \"glass\", \"btg\", \"bottle\"). pourOz is the house pour, bottleOz a 750.",
  "deplete": true,
+ "depleteGlasses": true,
+ "pourOz": 5,
+ "bottleOz": 25.36,
  "bottleGroups": [],
  "items": {},
  "names": {}
