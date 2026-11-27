@@ -1,5 +1,9 @@
 {
-"note": "Which Bevager (Craftable) wine items feed each tower slot, by exact Bevager item name (the leading 'Wine - ' left off). A slot's count is the summed on-hand of every listed item. Built 2026-11-22 from the Bevager item ids in the cellar map. 130C: its old Bevager item no longer exists, so it has no name yet. 337B (Ace of Spades Gold MAG) is the Armand De Brignac Brut Gold LARGE FORMAT 1.5L item. 108A (now DuMol Pinot Noir) and 123A (now Lynch-Bages) are empty until those wines are set up in Bevager. 337C (Sena 2009 MAG) was wrongly linked to The Curator items, so it is empty until its own Bevager item is found.",
+"note": "Which Bevager (Craftable) wine items feed each tower slot, by exact Bevager item name (the leading 'Wine - ' left off). A slot's count is the summed on-hand of every listed item. Built 2026-11-22 from the Bevager item ids in the cellar map. 130C: its old Bevager item no longer exists, so it has no name yet. 337B (Ace of Spades Gold MAG) is the Armand De Brignac Brut Gold LARGE FORMAT 1.5L item. 108A (now DuMol Pinot Noir) and 123A (now Lynch-Bages) are empty until those wines are set up in Bevager. 337C (Sena 2009 MAG) was wrongly linked to The Curator items, so it is empty until its own Bevager item is found. keys: the tower's wine key for a slot whose wine changed since the original slot sheet (use the wine's Bevager name as shown in the app). The sync copies it into that slot's item as k, so the count lands on the right wine.",
+"keys": {
+"108A": "DuMol Pinot Noir",
+"123A": "Chateau Lynch-Bages Pauillac"
+},
 "slots": {
 "100A": [
 "Rebholz Riesling Sekt Extra Brut"

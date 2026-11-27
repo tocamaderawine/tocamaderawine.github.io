@@ -230,6 +230,17 @@ body.offline .livestat i{background:var(--low)}
 .pfoot input{width:76px;background:var(--bg);border:1px solid var(--line-2);border-radius:10px;padding:9px;font-size:16px;text-align:center}
 .edit{border-top:1px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:10px}
 .edit h3{margin:0;font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.wpick{position:relative}
+.wlist{margin-top:6px;max-height:300px;overflow-y:auto;border:1px solid var(--line-2);border-radius:12px;background:var(--panel);-webkit-overflow-scrolling:touch}
+.wopt{display:grid;grid-template-columns:1fr auto;gap:2px 10px;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:11px 12px;color:var(--text);font:inherit;cursor:pointer}
+.wopt:last-child{border-bottom:0}
+.wopt:hover,.wopt:focus-visible{background:rgba(214,190,140,.08);outline:none}
+.wopt b{font-family:var(--serif);font-size:17px;font-weight:600;line-height:1.2}
+.wopt small{grid-column:1;font-size:12px;color:var(--muted)}
+.wopt span{grid-column:2;grid-row:1/span 2;align-self:center;text-align:right;font-size:12px;color:var(--muted);white-space:nowrap}
+.wopt span em{display:block;font-style:normal;font-size:15px;font-weight:600;color:var(--text)}
+.wopt.act b{font-family:inherit;font-size:15px;color:var(--accent)}
+.wopt.act.rm b{color:var(--red)}
 #dName{width:100%;background:var(--bg);border:1px solid var(--line-2);border-radius:10px;padding:11px 12px;font-family:var(--serif);font-size:20px;font-weight:600}
 .rowctl{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .ctl label{display:block;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
@@ -516,6 +527,7 @@ const LS="toca-tower-v1";
 
 function slotList(){ const out=[]; for(const sec of S.sections) for(const r of sec.rows) for(const c of sec.cols) out.push({id:r+c,row:r,col:c,sec}); return out; }
 function slot(id){ return S.slots[id]||{n:"",c:null,p:1}; }
+let DEFN=null; function defaultName(id){ if(!DEFN){ DEFN={}; const o=defaultState(); for(const k in o.slots) DEFN[k]=o.slots[k].n; } return DEFN[id]||""; }
 let WIDX={}, HAY={}, HIT=null;
 function nrm(t){ return String(t||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase(); }
 function reindex(){ WIDX={}; HAY={}; indexTaps();
@@ -539,12 +551,23 @@ const shelf={box:{v:null},opt:{}};
 function shelfRec(id){ if(id in shelf.opt) return shelf.opt[id]; const v=shelf.box.v; return v&&v[id]&&typeof v[id]==="object"?v[id]:null; }
 function here(id){ if(!LIVE) return null; const r=shelfRec(id); if(!r||r.h==null) return null; return Math.max(0,r.h-tapsSince(id,r.t||0)); }
 function fillOf(id){ const r=shelfRec(id); return r&&r.f?r.f:null; }
+let ORIGW=null; // the wine each slot held on the original slot sheet; a Bevager count for a slot belongs to that wine
+function origW(id){ if(!ORIGW){ ORIGW={}; const o=defaultState(); if(window.SEED) for(const k in SEED.items){ const it=SEED.items[k]; if(o.slots[k]&&it&&it.w) o.slots[k].w=it.w; } for(const k in o.slots) if(o.slots[k].w) ORIGW[k]=o.slots[k].w; } return ORIGW[id]; }
+function bevName(s){ return s&&s.w&&s.w[0]!=="~"?s.w:""; }
+function cnorm(t){ return nrm(t).replace(/[^a-z0-9]/g,""); }
 function applySync(y,countsOnly){
   if(!y||!y.items||!(y.t>(S.syncT||0))) return false;
   for(const id in y.items){ const s=S.slots[id], it=y.items[id]; if(!s||!it) continue;
-    if(it.n!=null) s.n=it.n; if("c" in it&&!(countsOnly&&s.ct>y.t)){ s.c=(it.c==null?null:it.c); s.ct=y.t; }
+    if(it.n!=null) s.n=it.n;
     if("p" in it&&!countsOnly) s.p=it.p;
     if("w" in it){ if(it.w) s.w=it.w; else delete s.w; } if("vt" in it){ if(it.vt) s.vt=it.vt; else delete s.vt; } }
+  // Counts go to the wine, not the slot, so a wine moved to another slot keeps its house count.
+  const keyOf=(id,it)=>it.k||it.w||origW(id), K={};
+  for(const id in y.items){ const it=y.items[id]; if(!it||!("c" in it)) continue; const k=keyOf(id,it); if(k&&!(k in K)) K[k]=it.c; }
+  const setC=(s,c)=>{ if(countsOnly&&s.ct>y.t) return; s.c=(c==null?null:c); s.ct=y.t; };
+  for(const id in S.slots){ const s=S.slots[id], it=y.items[id];
+    if(s.w&&(s.w in K)) setC(s,K[s.w]);
+    else if(it&&("c" in it)){ const k=keyOf(id,it); if(!k||k===s.w||(!s.w&&cnorm(s.n)===cnorm(defaultName(id)))) setC(s,it.c); } }
   if(y.clearLogBefore) S.log=S.log.filter(e=>e.t>=y.clearLogBefore);
   S.syncT=y.t; S.sync={src:y.src||"",audit:y.audit||"",t:y.t};
   return true;
@@ -919,7 +942,30 @@ function pull(id){ const s=slot(id); if(s.c>0) logEvent(id,-1); setAll(id,(s.c==
 function add(id){ const s=slot(id); logEvent(id,1); setAll(id,(s.c==null?0:s.c)+1); touch(sibs(id)); renderAll(); }
 function setCount(id,v){ setAll(id,(v===""||isNaN(v))?null:Math.max(0,Math.round(+v*100)/100)); touch(sibs(id)); renderAll(); }
 function setPar(id,v){ const s=S.slots[id]; if(!s) return; s.p=Math.max(0,Math.round(+v||0)); touch([id]); renderAll(); }
-function setName(id,v){ const s=S.slots[id]; if(!s) return; s.n=v.trim(); delete s.w; delete s.vt; touch([id]); renderAll(true); }
+function setName(id,v){ const s=S.slots[id]; if(!s) return; s.n=v.trim(); touch([id]); renderAll(); showToast(id+" renamed. Same bottles and count."); }
+function newWine(id,v){ const s=S.slots[id]; if(!s) return; s.n=v.trim(); delete s.w; delete s.vt; s.c=null; delete s.ct; touch([id]); renderAll(); showToast(s.n?id+" is now "+s.n+". Not counted yet.":id+" is now empty."); }
+function linkWine(id,src){ const s=S.slots[id], o=S.slots[src]; if(!s||!o||id===src||!o.n) return; const ch=[id];
+  if(!o.w){ o.w="~"+o.n.trim(); ch.push(src); }  // a wine that isn't in Bevager can still share one count
+  s.n=o.n; s.w=o.w; if(o.vt) s.vt=o.vt; else delete s.vt; s.c=(o.c==null?null:o.c); if(o.ct) s.ct=o.ct; else delete s.ct;
+  touch(ch); renderAll(); const oh=onHand(id); showToast(id+" now holds "+s.n+". House count "+(oh==null?"not known yet":oh)+", shared with "+sibs(id).filter(k=>k!==id).join(", ")+"."); }
+function wineGroups(id){ const g=new Map();
+  for(const x of slotList()){ const d=S.slots[x.id]; if(!d||!d.n) continue; const key=d.w||("n:"+cnorm(d.n)); if(!g.has(key)) g.set(key,{src:x.id,ids:[],n:d.n,w:bevName(d),vt:d.vt||"",hay:nrm(d.n+" "+(d.w||"")+" "+(d.vt||""))}); g.get(key).ids.push(x.id); }
+  return [...g.values()].filter(x=>!(x.ids.length===1&&x.ids[0]===id)&&!x.ids.includes(id)).sort((a,b)=>a.n.localeCompare(b.n)); }
+let WPICK=false;
+function wlistShow(id){ const el=document.getElementById("wlist"), inp=document.getElementById("dName"); if(!el||!inp) return;
+  const t=inp.value.trim(), cur=slot(id).n||"", changed=!!t&&cnorm(t)!==cnorm(cur), toks=changed?nrm(t).split(/\s+/).filter(Boolean):[];
+  const all=wineGroups(id); let hits=toks.length?all.filter(x=>toks.every(k=>x.hay.includes(k))):all;
+  if(!changed&&cur){ const ct=nrm(cur).split(/\s+/).filter(Boolean), m=x=>ct.every(k=>x.hay.includes(k)); hits=hits.filter(m).concat(hits.filter(x=>!m(x))); } // same wine elsewhere on the tower comes first
+  const opt=(a,b,sm,sp,cls,extra)=>`<button type="button" class="wopt${cls||""}" data-wact="${a}"${extra||""}><b>${esc(b)}</b>${sm?`<small>${esc(sm)}</small>`:""}${sp||""}</button>`;
+  let h=(!t&&cur)?opt("empty","Empty this slot","Takes "+cur+" off "+id,""," act rm"):"";
+  h+=hits.slice(0,60).map(x=>{ const oh=onHand(x.src), sub=[x.w&&cnorm(x.w)!==cnorm(x.n)?x.w:"",x.vt].filter(Boolean).join(" · ");
+    return opt("link",x.n,sub,`<span><em>${oh==null?"?":oh}</em>${esc(x.ids.join(", "))}</span>`,"",` data-src="${x.src}"`); }).join("");
+  if(changed){ if(cur) h+=opt("rename","Rename to \u201c"+t+"\u201d","Same wine, same bottles and count",""," act"); h+=opt("new","New wine \u201c"+t+"\u201d","Not in the tower yet. Starts uncounted.",""," act"); }
+  if(!h) h=`<p class="note" style="padding:12px">No wine on the tower matches. Keep typing to add it as a new wine.</p>`;
+  el.innerHTML=h; el.hidden=false; }
+function wlistHide(){ const el=document.getElementById("wlist"); if(el){ el.hidden=true; el.innerHTML=""; } }
+function wpick(b){ const inp=document.getElementById("dName"), t=inp?inp.value.trim():"", a=b.dataset.wact; WPICK=false; wlistHide();
+  if(a==="link") linkWine(sel,b.dataset.src); else if(a==="rename") setName(sel,t); else if(a==="new") newWine(sel,t); else if(a==="empty") newWine(sel,""); }
 function addRow(secId){ const sec=S.sections.find(x=>x.id===secId); const r=Math.max(...sec.rows)+1; sec.rows.push(r); sec.cols.forEach(c=>{ S.slots[r+c]={n:"",c:null,p:1}; }); touch(); sel=r+sec.cols[0]; renderAll(); }
 
 /* ---------- 3D tower ---------- */
@@ -1331,11 +1377,12 @@ function renderDetail(keepFocus){
   const meta=[wi&&wi.g, wi&&wi.r&&(wi.r+(wi.c&&wi.r.indexOf(wi.c)<0?", "+wi.c:"")), s.vt].filter(Boolean).join(" · ");
   const pill=s.n&&(st==="out"||st==="low"||(!LIVE&&st==="unk"))?`<span class="pill s-${st}">${LABEL[st]}</span>`:"";
   const editor=readOnly?"":LIVE?`<div class="edit"><h3>Manager edits</h3>
-      <input id="dName" type="text" value="${esc(s.n)}" placeholder="Wine in this slot" aria-label="Wine in this slot">
+      <p class="note">To move a wine here, tap the name and pick it from the list. It keeps its house count. Type a name that isn't on the tower to add a new wine.</p>
+      <div class="wpick"><input id="dName" type="text" value="${esc(s.n)}" placeholder="Wine in this slot" aria-label="Wine in this slot" autocomplete="off" spellcheck="false"><div id="wlist" class="wlist" role="listbox" hidden></div></div>
       <div class="rowctl"><div class="ctl"><label for="dCount">Building count</label><div class="step"><input id="dCount" inputmode="decimal" value="${s.c==null?"":onHand(sel)}" placeholder="?"></div></div>
       <div class="ctl"><label for="dPar">Par</label><div class="step"><button id="pminus" aria-label="Lower par">−</button><input id="dPar" inputmode="numeric" value="${s.p}"><button id="pplus" aria-label="Raise par">+</button></div></div></div>
       <p class="note">Typing a building count corrects it. The weekly Bevager audit replaces it.</p></div>`
-    :`<div class="edit"><input id="dName" type="text" value="${esc(s.n)}" placeholder="Wine in this slot" aria-label="Wine in this slot">
+    :`<div class="edit"><div class="wpick"><input id="dName" type="text" value="${esc(s.n)}" placeholder="Wine in this slot" aria-label="Wine in this slot" autocomplete="off" spellcheck="false"><div id="wlist" class="wlist" role="listbox" hidden></div></div>
       <div class="rowctl"><div class="ctl"><label for="dCount">On hand</label><div class="step"><button id="minus" aria-label="Pulled one bottle">−</button><input id="dCount" inputmode="numeric" value="${s.c==null?"":s.c}" placeholder="?"><button id="plus" aria-label="Added one bottle">+</button></div></div>
       <div class="ctl"><label for="dPar">Par</label><div class="step"><button id="pminus" aria-label="Lower par">−</button><input id="dPar" inputmode="numeric" value="${s.p}"><button id="pplus" aria-label="Raise par">+</button></div></div></div>
       <p class="note">− logs a bottle pulled and + logs a bottle added. Typing a number corrects the count without logging.</p></div>`;
@@ -1346,7 +1393,7 @@ function renderDetail(keepFocus){
     <div><h2 class="wname${s.n?"":" open"}">${esc(s.n||"Open slot")}</h2>${meta?`<div class="wmeta">${esc(meta)}</div>`:""}${pill}</div>
     ${f?`<div class="guide"><button class="avbtn" aria-label="Tap Ben for one of his moves">${avatarNow()}</button><p class="say">${esc(f)}</p></div>`:""}
     ${LIVE&&s.n?`<div class="hair"></div>${shelfHtml(sel)}`:oldCount}
-    ${s.w?`<p class="note">Bevager: ${esc(s.w)}${s.vt?" · "+esc(s.vt):""}${sibs(sel).length>1?" · stock shared with "+sibs(sel).filter(k=>k!==sel).join(", "):""}</p>`:""}
+    ${s.w?`<p class="note">${bevName(s)?"Bevager: "+esc(bevName(s))+(s.vt?" · "+esc(s.vt):""):"Not in Bevager"}${sibs(sel).length>1?" · stock shared with "+sibs(sel).filter(k=>k!==sel).join(", "):""}</p>`:""}
     <p class="note">${esc(whereText(sel))}</p>
     ${editor}
     ${LIVE&&readOnly?`<p class="note">Anyone can tap Took one or Restocked. Managers sign in under Manage to change names and par.</p>`:(!LIVE&&readOnly?`<p class="note">View only. Counts can only be changed by an editor.</p>`:"")}`;
@@ -1355,7 +1402,12 @@ function renderDetail(keepFocus){
   on("minus","onclick",()=>pull(sel)); on("plus","onclick",()=>add(sel));
   on("pminus","onclick",()=>setPar(sel,slot(sel).p-1)); on("pplus","onclick",()=>setPar(sel,slot(sel).p+1));
   on("dCount","onchange",e=>setCount(sel,e.target.value)); on("dPar","onchange",e=>setPar(sel,e.target.value));
-  on("dName","onchange",e=>setName(sel,e.target.value));
+  { const nm=$("dName"), wl=$("wlist"); if(nm&&wl){
+    nm.oninput=()=>wlistShow(sel); nm.onfocus=()=>wlistShow(sel);
+    nm.onkeydown=e=>{ if(e.key==="Enter"){ e.preventDefault(); const f=wl.querySelector("[data-wact]"); if(f) wpick(f); } else if(e.key==="Escape"){ nm.value=slot(sel).n; wlistHide(); nm.blur(); } };
+    nm.onblur=()=>setTimeout(()=>{ if(WPICK) return; const v=$("dName"); if(v&&document.activeElement!==v){ v.value=slot(sel).n; wlistHide(); } },200);
+    wl.onpointerdown=e=>{ WPICK=true; e.preventDefault(); }; wl.onpointercancel=()=>{ WPICK=false; };
+    wl.onclick=e=>{ const b=e.target.closest("[data-wact]"); if(b) wpick(b); else WPICK=false; }; } }
   on("took","onclick",()=>tookOne(sel)); on("rst","onclick",()=>{ PICK=sel; MORE=false; renderDetail(); });
   on("pclose","onclick",()=>{ PICK=null; renderDetail(); });
   on("pmorebtn","onclick",()=>{ MORE=true; renderDetail(); const m=$("pmore"); if(m) m.focus(); });
@@ -1449,7 +1501,7 @@ function renderResults(){
   const ids=slotList().map(s=>s.id).filter(id=>HIT.has(id));
   if(!ids.length){ el.innerHTML=`<p class="note">Nothing in the tower matches “${esc(query)}”.</p>`; return; }
   el.innerHTML=ids.slice(0,8).map(id=>{ const s=slot(id), st=status(id);
-    return `<button class="res" data-slot="${id}"><i class="dot d-${st}"></i><span class="rn"><b>${esc(s.n||"open")}</b>${s.w&&nrm(s.w)!==nrm(s.n)?`<small>${esc(s.w)}${s.vt?" · "+esc(s.vt):""}</small>`:""}<small>${esc(shortWhere(id))}</small></span><span class="rc"><b>${esc(id)}</b><small>${st==="empty"?"":onHand(id)==null?"not counted":onHand(id)<=0?"out":onHand(id)+" on hand"}${here(id)!=null?" · "+here(id)+" in slot":""}</small></span></button>`; }).join("")
+    return `<button class="res" data-slot="${id}"><i class="dot d-${st}"></i><span class="rn"><b>${esc(s.n||"open")}</b>${bevName(s)&&nrm(bevName(s))!==nrm(s.n)?`<small>${esc(bevName(s))}${s.vt?" · "+esc(s.vt):""}</small>`:""}<small>${esc(shortWhere(id))}</small></span><span class="rc"><b>${esc(id)}</b><small>${st==="empty"?"":onHand(id)==null?"not counted":onHand(id)<=0?"out":onHand(id)+" on hand"}${here(id)!=null?" · "+here(id)+" in slot":""}</small></span></button>`; }).join("")
     +(ids.length>8?`<p class="note">${ids.length-8} more. Keep typing to narrow it down.</p>`:"");
 }
 document.getElementById("results").onclick=e=>{ const b=e.target.closest("[data-slot]"); if(!b||!S.slots[b.dataset.slot]) return; openSlot(b.dataset.slot); };
