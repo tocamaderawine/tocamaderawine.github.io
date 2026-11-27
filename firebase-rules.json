@@ -70,6 +70,185 @@
     },
     "toast": {
       ".read": true
+    },
+    "contests": {
+      ".read": true,
+      "roster": {
+        "$k": {
+          ".write": "auth != null && (root.child('owner').val() === auth.uid || root.child('editors').child(auth.uid).exists())",
+          ".validate": "$k.matches(/^[a-z0-9]{1,24}$/) && newData.hasChildren(['n', 'r', 'on'])",
+          "n": {
+            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 60"
+          },
+          "r": {
+            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 20"
+          },
+          "on": {
+            ".validate": "newData.isBoolean()"
+          },
+          "t": {
+            ".validate": "newData.isNumber()"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      },
+      "list": {
+        "$k": {
+          ".write": "auth != null && (root.child('owner').val() === auth.uid || root.child('editors').child(auth.uid).exists())",
+          ".validate": "$k.matches(/^[a-z0-9]{1,24}$/) && newData.hasChildren(['n', 's', 'e', 'm'])",
+          "n": {
+            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 60"
+          },
+          "d": {
+            ".validate": "newData.isString() && newData.val().length >= 0 && newData.val().length <= 200"
+          },
+          "p": {
+            ".validate": "newData.isString() && newData.val().length >= 0 && newData.val().length <= 100"
+          },
+          "s": {
+            ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)"
+          },
+          "e": {
+            ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)"
+          },
+          "m": {
+            ".validate": "newData.val() === 'lottery' || newData.val() === 'most'"
+          },
+          "x": {
+            ".validate": "newData.isBoolean()"
+          },
+          "t": {
+            ".validate": "newData.isNumber()"
+          },
+          "by": {
+            ".validate": "newData.isString()"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      },
+      "jackpots": {
+        "$k": {
+          ".write": "auth != null && (root.child('owner').val() === auth.uid || root.child('editors').child(auth.uid).exists())",
+          ".validate": "$k.matches(/^[a-z0-9]{1,24}$/) && newData.hasChildren(['n', 's', 'e'])",
+          "n": {
+            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 60"
+          },
+          "s": {
+            ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)"
+          },
+          "e": {
+            ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)"
+          },
+          "t": {
+            ".validate": "newData.isNumber()"
+          },
+          "by": {
+            ".validate": "newData.isString()"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      },
+      "entries": {
+        "$k": {
+          ".write": "(auth != null && (root.child('owner').val() === auth.uid || root.child('editors').child(auth.uid).exists()) && !data.exists() && newData.child('by').val() === auth.uid && newData.child('t').val() === now) || (auth != null && root.child('owner').val() === auth.uid && !newData.exists())",
+          ".validate": "$k.matches(/^[a-z0-9]{1,24}$/) && newData.hasChildren(['s', 'c', 'q', 'by', 't']) && root.child('contests/roster').child(newData.child('s').val()).exists() && root.child('contests/list').child(newData.child('c').val()).exists()",
+          "s": {
+            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 24"
+          },
+          "c": {
+            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 24"
+          },
+          "q": {
+            ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 20 && newData.val() % 1 === 0"
+          },
+          "n": {
+            ".validate": "newData.isString() && newData.val().length >= 0 && newData.val().length <= 80"
+          },
+          "by": {
+            ".validate": "newData.isString()"
+          },
+          "t": {
+            ".validate": "newData.isNumber()"
+          },
+          "x": {
+            ".write": "auth != null && (root.child('owner').val() === auth.uid || root.child('editors').child(auth.uid).exists()) && !data.exists() && data.parent().exists()",
+            ".validate": "newData.hasChildren(['by', 't']) && newData.child('by').val() === auth.uid && newData.child('t').val() === now",
+            "by": {
+              ".validate": "newData.isString()"
+            },
+            "t": {
+              ".validate": "newData.isNumber()"
+            },
+            "$other": {
+              ".validate": false
+            }
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      },
+      "draws": {
+        "$g": {
+          ".validate": "$g.matches(/^[cj]_[a-z0-9]{1,24}$/)",
+          "$k": {
+            ".write": "(auth != null && (root.child('owner').val() === auth.uid || root.child('editors').child(auth.uid).exists()) && !data.exists() && newData.child('by').val() === auth.uid && newData.child('t').val() === now) || (auth != null && root.child('owner').val() === auth.uid && !newData.exists())",
+            ".validate": "$k.matches(/^[a-z0-9]{1,24}$/) && newData.hasChildren(['w', 'tk', 'by', 't']) && root.child('contests/roster').child(newData.child('w').val()).exists()",
+            "w": {
+              ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 24"
+            },
+            "tk": {
+              ".validate": "newData.isNumber()"
+            },
+            "pool": {
+              ".validate": "newData.isNumber()"
+            },
+            "tie": {
+              ".validate": "newData.isNumber()"
+            },
+            "by": {
+              ".validate": "newData.isString()"
+            },
+            "t": {
+              ".validate": "newData.isNumber()"
+            },
+            "v": {
+              ".write": "auth != null && root.child('owner').val() === auth.uid && !data.exists() && data.parent().exists()",
+              ".validate": "newData.hasChildren(['by', 't']) && newData.child('by').val() === auth.uid && newData.child('t').val() === now",
+              "by": {
+                ".validate": "newData.isString()"
+              },
+              "t": {
+                ".validate": "newData.isNumber()"
+              },
+              "$other": {
+                ".validate": false
+              }
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        }
+      },
+      "mgr": {
+        "$uid": {
+          ".write": "auth != null && auth.uid === $uid && ((root.child('owner').val() === auth.uid || root.child('editors').child(auth.uid).exists()))",
+          ".validate": "newData.hasChildren(['n'])",
+          "n": {
+            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 30"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
     }
   }
 }
