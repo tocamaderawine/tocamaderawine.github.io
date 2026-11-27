@@ -10,8 +10,4 @@ Staff address: https://tocamaderawine.github.io
 
 ## Contests
 
-`contests/` is the staff contest hub: https://tocamaderawine.github.io/contests/
-
-- Same live database and manager logins as the tower. Everyone can see standings; only the owner and approved editors can change anything.
-- Data lives under `contests/` in the database. Its rules are the `contests` section of `firebase-rules.json` (publish them in the Firebase console after changing).
-- `contests/logic.js` does the counting and drawing. Tests: `node --test contests/tests/*.test.mjs`. `contests/tests/mock.js` is an in-memory database for trying the page without touching live data.
+The staff contest hub lives at its own address so it installs as its own app: https://toca-contests.github.io (repo: toca-contests/toca-contests.github.io). `contests/` here only forwards the old link. It uses this site's live database; its rules are the `contests` section of `firebase-rules.json`.
